@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package test.v1;
+
+option go_package = "generated/test/v1;testv1";
+
+// Test message to verify our setup
+message Ping {
+  string message = 1;
+  int64 timestamp = 2;
+}
+
+// Simple service to test our gRPC setup
+service TestService {
+  rpc SendPing (PingRequest) returns (PingResponse);
+}
+
+message PingRequest {
+  Ping ping = 1;
+}
+
+message PingResponse {
+  Ping ping = 1;
+  bool success = 2;
+}
