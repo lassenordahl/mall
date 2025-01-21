@@ -4,7 +4,7 @@
 // - protoc             v5.29.3
 // source: proto/api.proto
 
-package testv1
+package proto
 
 import (
 	context "context"
@@ -25,8 +25,6 @@ const (
 // TestServiceClient is the client API for TestService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-//
-// Simple service to test our gRPC setup
 type TestServiceClient interface {
 	SendPing(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 }
@@ -52,8 +50,6 @@ func (c *testServiceClient) SendPing(ctx context.Context, in *PingRequest, opts 
 // TestServiceServer is the server API for TestService service.
 // All implementations must embed UnimplementedTestServiceServer
 // for forward compatibility.
-//
-// Simple service to test our gRPC setup
 type TestServiceServer interface {
 	SendPing(context.Context, *PingRequest) (*PingResponse, error)
 	mustEmbedUnimplementedTestServiceServer()
@@ -118,6 +114,114 @@ var TestService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendPing",
 			Handler:    _TestService_SendPing_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/api.proto",
+}
+
+const (
+	ConsoleService_GetNewWebsites_FullMethodName = "/test.v1.ConsoleService/GetNewWebsites"
+)
+
+// ConsoleServiceClient is the client API for ConsoleService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ConsoleServiceClient interface {
+	// GetNewWebsites returns a list of websites that fill in the remaining slots
+	// on the UI. It returns a unique list that contains zero of the websites that
+	// have already been generated on the map.
+	GetNewWebsites(ctx context.Context, in *GetWebsitesResponse, opts ...grpc.CallOption) (*GetWebsitesResponse, error)
+}
+
+type consoleServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewConsoleServiceClient(cc grpc.ClientConnInterface) ConsoleServiceClient {
+	return &consoleServiceClient{cc}
+}
+
+func (c *consoleServiceClient) GetNewWebsites(ctx context.Context, in *GetWebsitesResponse, opts ...grpc.CallOption) (*GetWebsitesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetWebsitesResponse)
+	err := c.cc.Invoke(ctx, ConsoleService_GetNewWebsites_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ConsoleServiceServer is the server API for ConsoleService service.
+// All implementations must embed UnimplementedConsoleServiceServer
+// for forward compatibility.
+type ConsoleServiceServer interface {
+	// GetNewWebsites returns a list of websites that fill in the remaining slots
+	// on the UI. It returns a unique list that contains zero of the websites that
+	// have already been generated on the map.
+	GetNewWebsites(context.Context, *GetWebsitesResponse) (*GetWebsitesResponse, error)
+	mustEmbedUnimplementedConsoleServiceServer()
+}
+
+// UnimplementedConsoleServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedConsoleServiceServer struct{}
+
+func (UnimplementedConsoleServiceServer) GetNewWebsites(context.Context, *GetWebsitesResponse) (*GetWebsitesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNewWebsites not implemented")
+}
+func (UnimplementedConsoleServiceServer) mustEmbedUnimplementedConsoleServiceServer() {}
+func (UnimplementedConsoleServiceServer) testEmbeddedByValue()                        {}
+
+// UnsafeConsoleServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ConsoleServiceServer will
+// result in compilation errors.
+type UnsafeConsoleServiceServer interface {
+	mustEmbedUnimplementedConsoleServiceServer()
+}
+
+func RegisterConsoleServiceServer(s grpc.ServiceRegistrar, srv ConsoleServiceServer) {
+	// If the following call pancis, it indicates UnimplementedConsoleServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&ConsoleService_ServiceDesc, srv)
+}
+
+func _ConsoleService_GetNewWebsites_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWebsitesResponse)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServiceServer).GetNewWebsites(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConsoleService_GetNewWebsites_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServiceServer).GetNewWebsites(ctx, req.(*GetWebsitesResponse))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ConsoleService_ServiceDesc is the grpc.ServiceDesc for ConsoleService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ConsoleService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "test.v1.ConsoleService",
+	HandlerType: (*ConsoleServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetNewWebsites",
+			Handler:    _ConsoleService_GetNewWebsites_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

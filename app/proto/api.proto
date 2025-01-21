@@ -2,15 +2,16 @@ syntax = "proto3";
 
 package test.v1;
 
-option go_package = "generated/test/v1;testv1";
+option go_package = "github.com/lassenordahl/mall/server/proto;proto";
 
-// Test message to verify our setup
+// Test functions for generation work.
+// TODO(lasse): Remove.
+
 message Ping {
   string message = 1;
   int64 timestamp = 2;
 }
 
-// Simple service to test our gRPC setup
 service TestService {
   rpc SendPing (PingRequest) returns (PingResponse);
 }
@@ -23,3 +24,39 @@ message PingResponse {
   Ping ping = 1;
   bool success = 2;
 }
+
+// Real RPCs
+
+message Website {
+  string string = 1;
+  int32 rank = 2;
+  string domain = 3;
+  string meta = 4;
+  string description = 5;
+}
+
+message Coordinate {
+  int32 x = 1;
+  int32 y = 2;
+}
+
+message CoordinateWebsite {
+  Coordinate coordinate = 1;
+  Website website = 2;
+}
+
+message GetWebsitesRequest {
+  repeated string pov_website_ids = 1;
+}
+
+message GetWebsitesResponse {
+  repeated CoordinateWebsite coordinate_websites = 1;
+}
+
+service ConsoleService {
+  // GetNewWebsites returns a list of websites that fill in the remaining slots
+  // on the UI. It returns a unique list that contains zero of the websites that
+  // have already been generated on the map.
+  rpc GetNewWebsites(GetWebsitesResponse) returns (GetWebsitesResponse);
+}
+
