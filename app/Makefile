@@ -1,5 +1,5 @@
 .PHONY: generate
-generate: generate-go generate-ts
+generate: generate-go generate-ts generate-python
 
 .PHONY: generate-go
 generate-go:
@@ -16,9 +16,17 @@ generate-ts:
 		--plugin=protoc-gen-ts_proto=./client/node_modules/.bin/protoc-gen-ts_proto \
 		proto/*.proto
 
-# Optional: Install all necessary protoc plugins
+.PHONY: generate-python
+generate-python:
+	python3 -m grpc_tools.protoc \
+		-I. \
+		--python_out=./embeddingService/proto \
+		--grpc_python_out=./embeddingService/proto \
+		proto/embedding.proto
+
 .PHONY: install-plugins
 install-plugins:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 	cd client && npm install @protobuf-ts/plugin
+	python3 -m pip install grpcio-tools

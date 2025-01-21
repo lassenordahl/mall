@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package test.v1;
+
+option go_package = "github.com/lassenordahl/mall/server/proto;proto";
+
+message GetRelatedEmbeddingsRequest {
+  repeated string website_ids = 1;
+}
+
+message GetRelatedEmbeddingsResponse {
+  repeated string website_ids = 2;
+}
+
+message QueueEmbeddingGenerationRequest {}
+
+message QueueEmbeddingGenerationResponse {}
+
+service EmbeddingService {
+  rpc GetRelatedEmbeddings (GetRelatedEmbeddingsRequest) returns (GetRelatedEmbeddingsResponse);
+  rpc QueueEmbeddingGeneration (QueueEmbeddingGenerationRequest) returns (QueueEmbeddingGenerationResponse);
+}
