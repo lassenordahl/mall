@@ -2,39 +2,45 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
-	"net"
-	"time"
+	"net/http"
 
 	pb "github.com/lassenordahl/mall/proto"
 	"google.golang.org/grpc"
 )
 
-type server struct {
-    pb.UnimplementedTestServiceServer
-}
+type server struct{}
 
-func (s *server) SendPing(ctx context.Context,  req*pb.PingRequest) (*pb.PingResponse, error) {
-    return &pb.PingResponse{
-        Ping: &pb.Ping{
-            Message:   "Hello " + req.Ping.Message,
-            Timestamp: time.Now().Unix(),
-        },
-        Success: true,
-    }, nil
+func (s *server) getEmbeddings(w http.ResponseWriter, r *http.Request) {
+  conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+	if err != nil {
+    http.Error(w, err.Error(), http.StatusInternalServerError)
+  	return
+	}
+
+	defer conn.Close()
+
+  client := pb.NewEmbeddingServiceClient(conn)
+
+  resp, err := client.GetRelatedEmbeddings(context.Background(), &pb.GetRelatedEmbeddingsRequest{
+		WebsiteIds: []string{"1", "2"},
+  })
+  if err != nil {
+    http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
+ 	}
+
+	w.Header().Set("Content-Type", "application/json")
+  json.NewEncoder(w).Encode(resp)
 }
 
 func main() {
-    lis, err := net.Listen("tcp", ":50051")
-    if err != nil {
-        log.Fatalf("failed to listen: %v", err)
-    }
+	s := &server{}
+	http.HandleFunc("/embeddings", s.getEmbeddings)
 
-    s := grpc.NewServer()
-    pb.RegisterTestServiceServer(s, &server{})
-
-    log.Printf("Server listening on :50051")
-    if err := s.Serve(lis); err != nil {
-        log.Fatalf("failed to serve: %v", err)
-    }
+	log.Printf("REST server listening on :8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }

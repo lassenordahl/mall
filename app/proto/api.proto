@@ -4,27 +4,6 @@ package test.v1;
 
 option go_package = "github.com/lassenordahl/mall/server/proto;proto";
 
-// Test functions for generation work.
-// TODO(lasse): Remove.
-
-message Ping {
-  string message = 1;
-  int64 timestamp = 2;
-}
-
-service TestService {
-  rpc SendPing (PingRequest) returns (PingResponse);
-}
-
-message PingRequest {
-  Ping ping = 1;
-}
-
-message PingResponse {
-  Ping ping = 1;
-  bool success = 2;
-}
-
 // Real RPCs
 
 message Website {

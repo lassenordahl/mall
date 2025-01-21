@@ -3,12 +3,10 @@ from concurrent import futures
 from proto import embedding_pb2, embedding_pb2_grpc
 
 class EmbeddingService(embedding_pb2_grpc.EmbeddingServiceServicer):
-    def GenerateEmbeddings(self, request, context):
-        response = embedding_pb2.EmbeddingResponse()
-        return response
-
-    def FindSimilar(self, request, context):
-        response = embedding_pb2.SimilarityResponse()
+    def GetRelatedEmbeddings(self, request, context):
+        print("Request received")
+        print(request)
+        response = embedding_pb2.GetRelatedEmbeddingsResponse()
         return response
 
 def serve():
