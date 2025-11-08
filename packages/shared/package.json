@@ -1,0 +1,21 @@
+{
+  "name": "@3d-neighborhood/shared",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./config": "./dist/config.js",
+    "./types": "./dist/types.js",
+    "./noise": "./dist/noise.js",
+    "./generation": "./dist/generation.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
