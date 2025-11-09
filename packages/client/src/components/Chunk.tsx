@@ -1,8 +1,8 @@
-import type { ChunkData } from '@3d-neighborhood/shared';
+import type { ChunkResponse } from '@3d-neighborhood/shared/api';
 import { Building } from './Building';
 
 interface ChunkProps {
-  chunk: ChunkData;
+  chunk: ChunkResponse;
 }
 
 /**

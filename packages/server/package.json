@@ -1,0 +1,23 @@
+{
+  "name": "@3d-neighborhood/server",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create-local": "wrangler d1 create neighborhood-db --local",
+    "db:init-local": "wrangler d1 execute neighborhood-db --local --file=./schema.sql",
+    "db:import-local": "tsx scripts/import-local-db.ts"
+  },
+  "dependencies": {
+    "hono": "^3.11.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231218.0",
+    "wrangler": "^3.22.1",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "better-sqlite3": "^9.2.2"
+  }
+}

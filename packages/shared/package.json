@@ -9,7 +9,8 @@
     "./config": "./dist/config.js",
     "./types": "./dist/types.js",
     "./noise": "./dist/noise.js",
-    "./generation": "./dist/generation.js"
+    "./generation": "./dist/generation.js",
+    "./api": "./dist/api.js"
   },
   "scripts": {
     "build": "tsc",

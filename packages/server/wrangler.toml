@@ -1,0 +1,12 @@
+name = "3d-neighborhood-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "neighborhood-db"
+database_id = "local-dev-db-id" # Placeholder for local development
+
+# Local development settings
+[env.local]
