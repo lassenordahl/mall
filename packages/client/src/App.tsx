@@ -2,9 +2,16 @@ import { Canvas } from '@react-three/fiber';
 import { Scene } from './components/Scene';
 import { World } from './components/World';
 import { Player } from './components/Player';
+import { StartScreen } from './components/StartScreen';
+import { DebugPanel } from './components/DebugPanel';
 import * as THREE from 'three';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { BuildingData } from '@3d-neighborhood/shared';
+
+interface SpawnPoint {
+  position: [number, number, number];
+  lookAt: [number, number, number];
+}
 
 /**
  * Main app component
@@ -13,6 +20,57 @@ import type { BuildingData } from '@3d-neighborhood/shared';
 function App() {
   const [buildings, setBuildings] = useState<BuildingData[]>([]);
   const [targetedBuilding, setTargetedBuilding] = useState<BuildingData | null>(null);
+  const [spawnPoint, setSpawnPoint] = useState<SpawnPoint | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [noclip, setNoclip] = useState(false);
+
+  // Check for URL parameters on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    // Check for start URL
+    const startUrl = params.get('start');
+    if (startUrl) {
+      handleStart(startUrl);
+    }
+
+    // Check for noclip mode
+    const noclipParam = params.get('noclip');
+    if (noclipParam !== null) {
+      setNoclip(noclipParam === 'true' || noclipParam === '1' || noclipParam === '');
+    }
+  }, []);
+
+  const handleStart = async (url: string) => {
+    setLoading(true);
+    try {
+      // Fetch entry point from API
+      const res = await fetch('/api/entry-point', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Website not found or not placed yet');
+      }
+
+      const data = await res.json();
+      setSpawnPoint({
+        position: [data.spawnX, data.spawnY, data.spawnZ],
+        lookAt: [data.lookAtX, data.lookAtY, data.lookAtZ],
+      });
+    } catch (error) {
+      console.error('Failed to find entry point:', error);
+      // Default spawn at origin
+      setSpawnPoint({
+        position: [0, 1.6, 10],
+        lookAt: [0, 10, 0],
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleBuildingsLoaded = useCallback((newBuildings: BuildingData[]) => {
     setBuildings(newBuildings);
@@ -22,11 +80,28 @@ function App() {
     setTargetedBuilding(building);
   }, []);
 
+  // Show start screen if no spawn point selected
+  if (!spawnPoint) {
+    return <StartScreen onStart={handleStart} />;
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading world...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
       <Canvas
         camera={{
-          position: [0, 1.6, 0], // Initial position (Player will move to safe spawn)
+          position: spawnPoint.position,
           fov: 75,
         }}
         gl={{
@@ -36,7 +111,12 @@ function App() {
       >
         <Scene />
         <World onBuildingsLoaded={handleBuildingsLoaded} />
-        <Player buildings={buildings} onTargetChange={handleTargetChange} />
+        <Player
+          buildings={buildings}
+          onTargetChange={handleTargetChange}
+          spawnPoint={spawnPoint}
+          noclip={noclip}
+        />
       </Canvas>
 
       {/* Crosshair in center of screen */}
@@ -99,6 +179,9 @@ function App() {
           <div style={{ color: '#999' }}>No target</div>
         )}
       </div>
+
+      {/* Debug panel - top left */}
+      <DebugPanel noclip={noclip} onNoclipChange={setNoclip} />
 
       {/* Instructions overlay - bottom left */}
       <div

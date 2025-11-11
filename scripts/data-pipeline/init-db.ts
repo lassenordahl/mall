@@ -13,21 +13,39 @@ const __dirname = path.dirname(__filename);
 
 const DB_PATH = path.join(__dirname, 'output', 'neighborhood.db');
 
-// Schema from spec Section 4.1 - adapted for local SQLite
+// Schema with structured semantic profiles
 const SCHEMA = `
--- Website metadata (scraped data + embeddings)
+-- Website metadata with structured semantic profiles
 CREATE TABLE IF NOT EXISTS websites (
   url TEXT PRIMARY KEY,
-  title TEXT,
-  description TEXT,
-  popularity_score REAL DEFAULT 0,
+
+  -- Structured semantic data (from LLM)
+  category TEXT,
+  subcategories TEXT,           -- JSON array stored as text
+  purpose TEXT,
+  audience TEXT,
+  content_types TEXT,           -- JSON array stored as text
+  primary_topics TEXT,          -- JSON array stored as text
+  tone TEXT,
+
+  -- Standardized description (generated from structure, used for embedding)
+  semantic_description TEXT,
+
+  -- Embedding
   embedding BLOB,               -- Binary: 384 floats × 4 bytes = 1536 bytes
   embedding_dim INTEGER DEFAULT 384,
   embedding_model TEXT DEFAULT 'all-MiniLM-L6-v2',
-  scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+  -- Metadata
+  data_source TEXT DEFAULT 'llm',  -- 'llm', 'scraped', 'hybrid'
+  confidence TEXT DEFAULT 'high',  -- 'high', 'medium', 'low', 'unknown'
+  popularity_score REAL DEFAULT 0,
+  generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_popularity ON websites(popularity_score DESC);
+CREATE INDEX IF NOT EXISTS idx_category ON websites(category);
+CREATE INDEX IF NOT EXISTS idx_confidence ON websites(confidence);
 
 -- Metadata about the data collection
 CREATE TABLE IF NOT EXISTS scrape_metadata (

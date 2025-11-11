@@ -4,9 +4,16 @@ import { PointerLockControls } from '@react-three/drei';
 import * as THREE from 'three';
 import type { BuildingData } from '@3d-neighborhood/shared';
 
+interface SpawnPoint {
+  position: [number, number, number];
+  lookAt: [number, number, number];
+}
+
 interface PlayerProps {
   buildings: BuildingData[];
   onTargetChange?: (building: BuildingData | null) => void;
+  spawnPoint?: SpawnPoint;
+  noclip?: boolean;
 }
 
 /**
@@ -19,7 +26,7 @@ interface PlayerProps {
  *
  * Includes collision detection with buildings
  */
-export function Player({ buildings, onTargetChange }: PlayerProps) {
+export function Player({ buildings, onTargetChange, spawnPoint, noclip = false }: PlayerProps) {
   const { camera, scene } = useThree();
   const velocity = useRef(new THREE.Vector3());
   const direction = useRef(new THREE.Vector3());
@@ -30,12 +37,21 @@ export function Player({ buildings, onTargetChange }: PlayerProps) {
   const lastRaycastTime = useRef(0);
   const RAYCAST_INTERVAL = 150; // Only raycast every 150ms instead of every frame
 
-  // Set spawn position once buildings are loaded
-  if (buildings.length > 0 && !hasSetSpawnPosition.current) {
-    const safePos = findSafeSpawnPosition(buildings);
-    camera.position.set(safePos[0], safePos[1], safePos[2]);
-    hasSetSpawnPosition.current = true;
-    console.log(`Spawned at safe position: ${safePos[0]}, ${safePos[2]}`);
+  // Set spawn position and camera orientation
+  if (!hasSetSpawnPosition.current) {
+    if (spawnPoint) {
+      // Use provided spawn point
+      camera.position.set(...spawnPoint.position);
+      camera.lookAt(new THREE.Vector3(...spawnPoint.lookAt));
+      hasSetSpawnPosition.current = true;
+      console.log(`Spawned at: ${spawnPoint.position.join(', ')}, looking at ${spawnPoint.lookAt.join(', ')}`);
+    } else if (buildings.length > 0) {
+      // Fallback to safe spawn position
+      const safePos = findSafeSpawnPosition(buildings);
+      camera.position.set(safePos[0], safePos[1], safePos[2]);
+      hasSetSpawnPosition.current = true;
+      console.log(`Spawned at safe position: ${safePos[0]}, ${safePos[2]}`);
+    }
   }
 
   /**
@@ -193,20 +209,25 @@ export function Player({ buildings, onTargetChange }: PlayerProps) {
     // Calculate new position
     const newPosition = camera.position.clone().add(velocity.current);
 
-    // Check for collisions at new position
-    const collidedBuilding = checkCollision(newPosition.x, newPosition.z);
+    // Check for collisions at new position (unless noclip is enabled)
+    if (!noclip) {
+      const collidedBuilding = checkCollision(newPosition.x, newPosition.z);
 
-    if (collidedBuilding) {
-      // Collision detected - don't move
-      // TODO: Redirect to building URL
-      // For now, log to console (throttled to once per second)
-      const now = Date.now();
-      if (now - lastCollisionAlert.current > 1000) {
-        console.log(`You bumped into: ${collidedBuilding.url}`);
-        lastCollisionAlert.current = now;
+      if (collidedBuilding) {
+        // Collision detected - don't move
+        // TODO: Redirect to building URL
+        // For now, log to console (throttled to once per second)
+        const now = Date.now();
+        if (now - lastCollisionAlert.current > 1000) {
+          console.log(`You bumped into: ${collidedBuilding.url}`);
+          lastCollisionAlert.current = now;
+        }
+      } else {
+        // No collision - update camera position
+        camera.position.add(velocity.current);
       }
     } else {
-      // No collision - update camera position
+      // Noclip enabled - always move
       camera.position.add(velocity.current);
     }
 

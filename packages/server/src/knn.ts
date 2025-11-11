@@ -3,6 +3,9 @@
  * For 548 websites (~850KB of embeddings), this is very fast
  */
 
+// Toggle between mock (random unplaced sites) and real k-NN
+export const USE_MOCK_KNN = true;
+
 export interface Website {
   url: string;
   embedding: Float32Array;
@@ -53,9 +56,43 @@ async function loadAllEmbeddings(db: D1Database): Promise<Website[]> {
 }
 
 /**
- * Find k most similar websites to the anchor URL
+ * Mock k-NN: Returns random unplaced websites
+ * Used for testing placement tracking without real embeddings
  */
-export async function findSimilarWebsites(
+async function findSimilarWebsitesMock(
+  db: D1Database,
+  anchorUrl: string,
+  k: number
+): Promise<string[]> {
+  // Get random unplaced sites
+  const unplaced = await db
+    .prepare(`
+      SELECT url FROM websites
+      WHERE url NOT IN (SELECT url FROM placements)
+      ORDER BY RANDOM()
+      LIMIT ?
+    `)
+    .bind(k)
+    .all<{ url: string }>();
+
+  const results = unplaced.results.map((r) => r.url);
+
+  // If no unplaced sites, return random sites (all placed scenario)
+  if (results.length === 0) {
+    const fallback = await db
+      .prepare('SELECT url FROM websites ORDER BY RANDOM() LIMIT ?')
+      .bind(k)
+      .all<{ url: string }>();
+    return fallback.results.map((r) => r.url);
+  }
+
+  return results;
+}
+
+/**
+ * Real k-NN: Semantic similarity search using embeddings
+ */
+async function findSimilarWebsitesReal(
   db: D1Database,
   anchorUrl: string,
   k: number
@@ -93,6 +130,22 @@ export async function findSimilarWebsites(
   similarities.sort((a, b) => b.similarity - a.similarity);
 
   return similarities.slice(0, k).map((s) => s.url);
+}
+
+/**
+ * Find k most similar websites to the anchor URL
+ * Automatically uses mock or real based on USE_MOCK_KNN flag
+ */
+export async function findSimilarWebsites(
+  db: D1Database,
+  anchorUrl: string,
+  k: number
+): Promise<string[]> {
+  if (USE_MOCK_KNN) {
+    return findSimilarWebsitesMock(db, anchorUrl, k);
+  } else {
+    return findSimilarWebsitesReal(db, anchorUrl, k);
+  }
 }
 
 /**

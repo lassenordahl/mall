@@ -46,8 +46,12 @@ def generate_embeddings_batch(metadata_items: List[Dict]) -> List[Dict]:
     # Prepare texts for embedding
     texts = []
     for item in metadata_items:
-        # Combine title and description for richer embedding
-        text = f"{item['title']}. {item['description']}"
+        # Use semantic_description if available (from LLM profiler)
+        # Otherwise fall back to title + description (from scraper)
+        if 'semantic_description' in item:
+            text = item['semantic_description']
+        else:
+            text = f"{item.get('title', item['domain'])}. {item.get('description', '')}"
         texts.append(text)
 
     print(f"Generating embeddings for {len(texts)} items...")
@@ -92,21 +96,35 @@ def embed_sample():
     """Generate embeddings for sample dataset"""
     import os
 
-    input_file = "scripts/data-pipeline/output/metadata-sample.jsonl"
+    # Try profiles first (LLM-generated), fall back to scraped metadata
+    profiles_file = "scripts/data-pipeline/output/profiles-with-descriptions-sample.jsonl"
+    metadata_file = "scripts/data-pipeline/output/metadata-sample.jsonl"
     output_file = "scripts/data-pipeline/output/embeddings-sample.jsonl"
 
-    if not os.path.exists(input_file):
-        print(f"Error: {input_file} not found. Run npm run data:scrape-sample first.")
+    input_file = None
+    if os.path.exists(profiles_file):
+        input_file = profiles_file
+        print("Using LLM-generated semantic profiles...")
+    elif os.path.exists(metadata_file):
+        input_file = metadata_file
+        print("Using scraped metadata (fallback)...")
+    else:
+        print(f"Error: Neither {profiles_file} nor {metadata_file} found.")
+        print("Run npm run data:profile-sample first, or npm run data:scrape-sample")
         return
 
-    print("Reading metadata from sample...")
+    print(f"Reading from {input_file}...")
     metadata_items = []
     with open(input_file, 'r') as f:
         for line in f:
             item = json.loads(line)
-            # Only process successful scrapes
-            if item['status'] == 'success':
-                metadata_items.append(item)
+            # For scraped metadata, only process successful scrapes
+            if 'status' in item and item['status'] != 'success':
+                continue
+            # For LLM profiles, skip errors
+            if item.get('category') == 'Error':
+                continue
+            metadata_items.append(item)
 
     print(f"Loaded {len(metadata_items)} items")
 
@@ -144,21 +162,35 @@ def embed_full():
     """Generate embeddings for full dataset"""
     import os
 
-    input_file = "scripts/data-pipeline/output/metadata-full.jsonl"
+    # Try profiles first (LLM-generated), fall back to scraped metadata
+    profiles_file = "scripts/data-pipeline/output/profiles-with-descriptions-full.jsonl"
+    metadata_file = "scripts/data-pipeline/output/metadata-full.jsonl"
     output_file = "scripts/data-pipeline/output/embeddings-full.jsonl"
 
-    if not os.path.exists(input_file):
-        print(f"Error: {input_file} not found. Run npm run data:scrape-full first.")
+    input_file = None
+    if os.path.exists(profiles_file):
+        input_file = profiles_file
+        print("Using LLM-generated semantic profiles...")
+    elif os.path.exists(metadata_file):
+        input_file = metadata_file
+        print("Using scraped metadata (fallback)...")
+    else:
+        print(f"Error: Neither {profiles_file} nor {metadata_file} found.")
+        print("Run npm run data:profile-full first, or npm run data:scrape-full")
         return
 
-    print("Reading metadata from full dataset...")
+    print(f"Reading from {input_file}...")
     metadata_items = []
     with open(input_file, 'r') as f:
         for line in f:
             item = json.loads(line)
-            # Only process successful scrapes
-            if item['status'] == 'success':
-                metadata_items.append(item)
+            # For scraped metadata, only process successful scrapes
+            if 'status' in item and item['status'] != 'success':
+                continue
+            # For LLM profiles, skip errors
+            if item.get('category') == 'Error':
+                continue
+            metadata_items.append(item)
 
     print(f"Loaded {len(metadata_items)} items")
 
