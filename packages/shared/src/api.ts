@@ -18,19 +18,37 @@ export interface ChunkResponse {
   }>;
 }
 
+export interface ChunkWithMetadata {
+  chunk: ChunkResponse;
+  cacheStatus: 'hit' | 'miss';
+}
+
+export interface StatsResponse {
+  totalWebsites: number;
+  placedWebsites: number;
+  totalChunks: number;
+  chunkBounds: {
+    minX: number;
+    maxX: number;
+    minZ: number;
+    maxZ: number;
+  };
+  chunkCoords: Array<[number, number]>;
+}
+
 export interface ErrorResponse {
   error: string;
   message: string;
 }
 
 /**
- * Type-safe fetch wrapper for chunk data
+ * Type-safe fetch wrapper for chunk data with cache status
  */
 export async function fetchChunk(
   cx: number,
   cz: number,
   baseUrl = '/api'
-): Promise<ChunkResponse> {
+): Promise<ChunkWithMetadata> {
   const url = `${baseUrl}/chunks/${cx}/${cz}`;
 
   const res = await fetch(url);
@@ -46,5 +64,22 @@ export async function fetchChunk(
     throw new Error(errorMessage);
   }
 
-  return res.json() as Promise<ChunkResponse>;
+  const chunk = await res.json() as ChunkResponse;
+  const cacheStatus = (res.headers.get('X-Chunk-Cache-Status') || 'hit') as 'hit' | 'miss';
+
+  return { chunk, cacheStatus };
+}
+
+/**
+ * Fetch world statistics
+ */
+export async function fetchStats(baseUrl = '/api'): Promise<StatsResponse> {
+  const url = `${baseUrl}/stats`;
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    throw new Error('Failed to fetch stats');
+  }
+
+  return res.json() as Promise<StatsResponse>;
 }

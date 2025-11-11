@@ -14,6 +14,7 @@ interface PlayerProps {
   onTargetChange?: (building: BuildingData | null) => void;
   spawnPoint?: SpawnPoint;
   noclip?: boolean;
+  onPositionChange?: (x: number, y: number, z: number) => void;
 }
 
 /**
@@ -26,7 +27,7 @@ interface PlayerProps {
  *
  * Includes collision detection with buildings
  */
-export function Player({ buildings, onTargetChange, spawnPoint, noclip = false }: PlayerProps) {
+export function Player({ buildings, onTargetChange, spawnPoint, noclip = false, onPositionChange }: PlayerProps) {
   const { camera, scene } = useThree();
   const velocity = useRef(new THREE.Vector3());
   const direction = useRef(new THREE.Vector3());
@@ -244,6 +245,9 @@ export function Player({ buildings, onTargetChange, spawnPoint, noclip = false }
 
     // Keep camera at eye level (1.6 units above ground)
     camera.position.y = 1.6;
+
+    // Notify position change for chunk loading
+    onPositionChange?.(camera.position.x, camera.position.y, camera.position.z);
 
     // Throttled raycast - only check every 150ms instead of every frame (60fps)
     const currentTime = Date.now();

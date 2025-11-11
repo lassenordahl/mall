@@ -3,6 +3,16 @@
  */
 
 /**
+ * Building rendering type - determines visual appearance
+ */
+export enum BuildingType {
+  NORMAL = 'normal',           // Standard building (white/black outline)
+  NEW = 'new',                 // Newly generated this session (green outline)
+  ANCHOR = 'anchor',           // Anchor/seed building (future: different color)
+  HIGHLIGHTED = 'highlighted', // User-selected/targeted (future: different color)
+}
+
+/**
  * World configuration - all parameters needed for deterministic generation
  */
 export interface WorldConfig {

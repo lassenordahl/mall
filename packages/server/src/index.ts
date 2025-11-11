@@ -222,7 +222,9 @@ app.get('/api/chunks/:cx/:cz', async (c) => {
       .first<{ data: string }>();
 
     if (cached) {
-      return c.json<ChunkResponse>(JSON.parse(cached.data));
+      const response = c.json<ChunkResponse>(JSON.parse(cached.data));
+      response.headers.set('X-Chunk-Cache-Status', 'hit');
+      return response;
     }
 
     // Generate new chunk
@@ -235,7 +237,9 @@ app.get('/api/chunks/:cx/:cz', async (c) => {
       .bind(cx, cz, JSON.stringify(chunkData), 1)
       .run();
 
-    return c.json<ChunkResponse>(chunkData);
+    const response = c.json<ChunkResponse>(chunkData);
+    response.headers.set('X-Chunk-Cache-Status', 'miss');
+    return response;
   } catch (error) {
     console.error('Error generating chunk:', error);
     return c.json<ErrorResponse>(
@@ -243,6 +247,62 @@ app.get('/api/chunks/:cx/:cz', async (c) => {
         error: 'GENERATION_ERROR',
         message: error instanceof Error ? error.message : 'Failed to generate chunk',
       },
+      500
+    );
+  }
+});
+
+/**
+ * Get world statistics for stats panel and minimap
+ * GET /api/stats
+ */
+app.get('/api/stats', async (c) => {
+  try {
+    // Get total websites count
+    const totalWebsitesResult = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM websites'
+    ).first<{ count: number }>();
+    const totalWebsites = totalWebsitesResult?.count || 0;
+
+    // Get placed websites count (distinct URLs in placements)
+    const placedWebsitesResult = await c.env.DB.prepare(
+      'SELECT COUNT(DISTINCT url) as count FROM placements'
+    ).first<{ count: number }>();
+    const placedWebsites = placedWebsitesResult?.count || 0;
+
+    // Get total chunks count
+    const totalChunksResult = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM chunks'
+    ).first<{ count: number }>();
+    const totalChunks = totalChunksResult?.count || 0;
+
+    // Get all chunk coordinates for minimap
+    const chunksData = await c.env.DB.prepare(
+      'SELECT chunk_x, chunk_z FROM chunks ORDER BY chunk_x, chunk_z'
+    ).all<{ chunk_x: number; chunk_z: number }>();
+
+    const chunkCoords = chunksData.results.map(row => [row.chunk_x, row.chunk_z]);
+
+    // Calculate bounds
+    let minX = 0, maxX = 0, minZ = 0, maxZ = 0;
+    if (chunkCoords.length > 0) {
+      minX = Math.min(...chunkCoords.map(c => c[0]));
+      maxX = Math.max(...chunkCoords.map(c => c[0]));
+      minZ = Math.min(...chunkCoords.map(c => c[1]));
+      maxZ = Math.max(...chunkCoords.map(c => c[1]));
+    }
+
+    return c.json({
+      totalWebsites,
+      placedWebsites,
+      totalChunks,
+      chunkBounds: { minX, maxX, minZ, maxZ },
+      chunkCoords,
+    });
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    return c.json(
+      { error: 'Failed to fetch stats' },
       500
     );
   }

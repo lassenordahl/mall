@@ -1,27 +1,47 @@
 import type { BuildingData } from '@3d-neighborhood/shared';
-import { DEFAULT_WORLD_CONFIG } from '@3d-neighborhood/shared';
+import { DEFAULT_WORLD_CONFIG, BuildingType } from '@3d-neighborhood/shared';
 import { useMemo } from 'react';
 import * as THREE from 'three';
 
 interface BuildingProps {
   building: BuildingData;
+  type?: BuildingType;
 }
 
 /**
  * Individual building component
- * Renders with white walls and black edges (liminal aesthetic)
+ * Renders with white walls and colored edges based on type
  *
  * Position: worldX/worldZ from generation
  * Size: width x height from generation
- * Style: White walls with black edges
+ * Style: White walls with edges colored by BuildingType
+ *   - NORMAL: Black edges
+ *   - NEW: Green edges (newly generated this session)
+ *   - ANCHOR: Blue edges (future)
+ *   - HIGHLIGHTED: Yellow edges (future)
  */
-export function Building({ building }: BuildingProps) {
+export function Building({ building, type = BuildingType.NORMAL }: BuildingProps) {
   // Position at worldX/worldZ, with building centered on ground (y = height/2)
   const x = building.worldX;
   const y = building.height / 2;
   const z = building.worldZ;
 
-  // Create edges geometry for clean black lines
+  // Determine edge color based on building type
+  const edgeColor = useMemo(() => {
+    switch (type) {
+      case BuildingType.NEW:
+        return '#00ff00'; // Green for new buildings
+      case BuildingType.ANCHOR:
+        return '#0088ff'; // Blue for anchors (future)
+      case BuildingType.HIGHLIGHTED:
+        return '#ffff00'; // Yellow for highlighted (future)
+      case BuildingType.NORMAL:
+      default:
+        return '#000000'; // Black for normal
+    }
+  }, [type]);
+
+  // Create edges geometry for clean colored lines
   const edgesGeometry = useMemo(() => {
     const boxGeometry = new THREE.BoxGeometry(
       building.width,
@@ -39,10 +59,10 @@ export function Building({ building }: BuildingProps) {
         <meshBasicMaterial color="#ffffff" />
       </mesh>
 
-      {/* Black wireframe edges */}
+      {/* Colored wireframe edges based on type */}
       <lineSegments geometry={edgesGeometry}>
         <lineBasicMaterial
-          color="#000000"
+          color={edgeColor}
           linewidth={DEFAULT_WORLD_CONFIG.wireframeLineWidth}
         />
       </lineSegments>

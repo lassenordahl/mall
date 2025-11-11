@@ -4,8 +4,11 @@ import { World } from './components/World';
 import { Player } from './components/Player';
 import { StartScreen } from './components/StartScreen';
 import { DebugPanel } from './components/DebugPanel';
+import { StatsPanel } from './components/StatsPanel';
+import { Minimap } from './components/Minimap';
+import { usePlayerPosition } from './hooks/usePlayerPosition';
 import * as THREE from 'three';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { BuildingData } from '@3d-neighborhood/shared';
 
 interface SpawnPoint {
@@ -23,6 +26,11 @@ function App() {
   const [spawnPoint, setSpawnPoint] = useState<SpawnPoint | null>(null);
   const [loading, setLoading] = useState(false);
   const [noclip, setNoclip] = useState(false);
+  const [newChunksThisSession, setNewChunksThisSession] = useState(0);
+  const newChunkKeysRef = useRef<string[]>([]);
+
+  // Track player position for dynamic chunk loading
+  const { position: playerPosition, updatePosition } = usePlayerPosition();
 
   // Check for URL parameters on mount
   useEffect(() => {
@@ -96,6 +104,11 @@ function App() {
     setTargetedBuilding(building);
   }, []);
 
+  const handleNewChunksChange = useCallback((count: number, keys: string[]) => {
+    setNewChunksThisSession(count);
+    newChunkKeysRef.current = keys;
+  }, []);
+
   // Show start screen if no spawn point selected
   if (!spawnPoint) {
     return <StartScreen onStart={handleStart} />;
@@ -129,12 +142,15 @@ function App() {
         <World
           onBuildingsLoaded={handleBuildingsLoaded}
           spawnPosition={spawnPoint.position}
+          onNewChunksChange={handleNewChunksChange}
+          playerPosition={playerPosition || undefined}
         />
         <Player
           buildings={buildings}
           onTargetChange={handleTargetChange}
           spawnPoint={spawnPoint}
           noclip={noclip}
+          onPositionChange={updatePosition}
         />
       </Canvas>
 
@@ -199,7 +215,16 @@ function App() {
         )}
       </div>
 
-      {/* Debug panel - top left */}
+      {/* Stats panel - top left */}
+      <StatsPanel newChunksThisSession={newChunksThisSession} />
+
+      {/* Minimap - bottom right */}
+      <Minimap
+        newChunkKeys={newChunkKeysRef.current}
+        playerPosition={spawnPoint.position}
+      />
+
+      {/* Debug panel - moved to avoid stats panel */}
       <DebugPanel noclip={noclip} onNoclipChange={setNoclip} />
 
       {/* Instructions overlay - bottom left */}

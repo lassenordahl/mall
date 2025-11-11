@@ -8,7 +8,7 @@ export function DebugPanel({ noclip, onNoclipChange }: DebugPanelProps) {
     <div
       style={{
         position: 'absolute',
-        top: 20,
+        top: 170, // Moved down to avoid StatsPanel overlap
         left: 20,
         color: '#333',
         fontFamily: 'monospace',
