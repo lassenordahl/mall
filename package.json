@@ -7,6 +7,7 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=packages/server\" \"npm run dev --workspace=packages/client\" --names \"server,client\" --prefix-colors \"blue,green\"",
     "test:generation": "tsx scripts/test-generation.ts",
     "data:create-mock": "tsx scripts/data-pipeline/create-mock-dataset.ts",
     "data:download-tranco": "tsx scripts/data-pipeline/download-tranco.ts",
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.8",
     "@types/node": "^20.10.0",
+    "concurrently": "^9.2.1",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   }

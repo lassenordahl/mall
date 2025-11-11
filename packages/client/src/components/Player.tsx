@@ -44,13 +44,24 @@ export function Player({ buildings, onTargetChange, spawnPoint, noclip = false }
       camera.position.set(...spawnPoint.position);
       camera.lookAt(new THREE.Vector3(...spawnPoint.lookAt));
       hasSetSpawnPosition.current = true;
-      console.log(`Spawned at: ${spawnPoint.position.join(', ')}, looking at ${spawnPoint.lookAt.join(', ')}`);
+      console.log(`[Player] Spawned at: (${spawnPoint.position.join(', ')})`);
+      console.log(`[Player] Looking at: (${spawnPoint.lookAt.join(', ')})`);
+      console.log(`[Player] Available buildings: ${buildings.length}`);
+      if (buildings.length > 0) {
+        const nearestBuilding = buildings.reduce((nearest, b) => {
+          const distToB = Math.hypot(b.worldX - spawnPoint.position[0], b.worldZ - spawnPoint.position[2]);
+          const distToNearest = nearest ? Math.hypot(nearest.worldX - spawnPoint.position[0], nearest.worldZ - spawnPoint.position[2]) : Infinity;
+          return distToB < distToNearest ? b : nearest;
+        }, buildings[0]);
+        const distToNearest = Math.hypot(nearestBuilding.worldX - spawnPoint.position[0], nearestBuilding.worldZ - spawnPoint.position[2]);
+        console.log(`[Player] Nearest building: ${nearestBuilding.url} at distance ${distToNearest.toFixed(1)} units`);
+      }
     } else if (buildings.length > 0) {
       // Fallback to safe spawn position
       const safePos = findSafeSpawnPosition(buildings);
       camera.position.set(safePos[0], safePos[1], safePos[2]);
       hasSetSpawnPosition.current = true;
-      console.log(`Spawned at safe position: ${safePos[0]}, ${safePos[2]}`);
+      console.log(`[Player] Spawned at safe position: (${safePos[0]}, ${safePos[1]}, ${safePos[2]})`);
     }
   }
 

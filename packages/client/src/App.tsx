@@ -44,6 +44,7 @@ function App() {
   const handleStart = async (url: string) => {
     setLoading(true);
     try {
+      console.log(`[App] Fetching entry point for URL: ${url}`);
       // Fetch entry point from API
       const res = await fetch('/api/entry-point', {
         method: 'POST',
@@ -56,13 +57,19 @@ function App() {
       }
 
       const data = await res.json();
+      console.log('[App] Entry point response:', data);
+      console.log(`[App] Spawn position: (${data.spawnX}, ${data.spawnY}, ${data.spawnZ})`);
+      console.log(`[App] Building chunk: (${data.chunkX}, ${data.chunkZ})`);
+      console.log(`[App] Look at: (${data.lookAtX}, ${data.lookAtY}, ${data.lookAtZ})`);
+
       setSpawnPoint({
         position: [data.spawnX, data.spawnY, data.spawnZ],
         lookAt: [data.lookAtX, data.lookAtY, data.lookAtZ],
       });
     } catch (error) {
-      console.error('Failed to find entry point:', error);
+      console.error('[App] Failed to find entry point:', error);
       // Default spawn at origin
+      console.log('[App] Using default spawn at origin');
       setSpawnPoint({
         position: [0, 1.6, 10],
         lookAt: [0, 10, 0],
@@ -73,6 +80,15 @@ function App() {
   };
 
   const handleBuildingsLoaded = useCallback((newBuildings: BuildingData[]) => {
+    console.log(`[App] Buildings loaded: ${newBuildings.length} buildings`);
+    if (newBuildings.length > 0) {
+      const minX = Math.min(...newBuildings.map(b => b.worldX));
+      const maxX = Math.max(...newBuildings.map(b => b.worldX));
+      const minZ = Math.min(...newBuildings.map(b => b.worldZ));
+      const maxZ = Math.max(...newBuildings.map(b => b.worldZ));
+      console.log(`[App] Buildings worldX range: ${minX.toFixed(1)} to ${maxX.toFixed(1)}`);
+      console.log(`[App] Buildings worldZ range: ${minZ.toFixed(1)} to ${maxZ.toFixed(1)}`);
+    }
     setBuildings(newBuildings);
   }, []);
 
@@ -110,7 +126,10 @@ function App() {
         }}
       >
         <Scene />
-        <World onBuildingsLoaded={handleBuildingsLoaded} />
+        <World
+          onBuildingsLoaded={handleBuildingsLoaded}
+          spawnPosition={spawnPoint.position}
+        />
         <Player
           buildings={buildings}
           onTargetChange={handleTargetChange}
