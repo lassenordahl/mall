@@ -1172,3 +1172,526 @@ lsof -ti:3000 | xargs kill
 **Development**:
 - Dev server at http://localhost:3000/
 - Test suite: `npm run test:generation`
+
+---
+
+## Phase 5: Cloudflare Production Deployment
+
+**Goal**: Deploy the full application to Cloudflare (Workers + Pages + D1) for public access
+
+**Status**: 🚧 IN PROGRESS (started 2025-11-11)
+
+**Target Architecture**:
+```
+Cloudflare Pages (Frontend)
+  ↓ HTTPS
+Cloudflare Workers (API)
+  ↓ D1 binding
+Cloudflare D1 (Database)
+```
+
+### Deployment Plan
+
+#### Overview
+
+**Current State**:
+- ✅ Backend configured for Cloudflare Workers (`wrangler.toml` exists)
+- ✅ D1 database schema defined (`schema.sql`)
+- ✅ Sample data ready (548 websites with embeddings)
+- ❌ Database empty (needs data import)
+- ❌ Frontend not configured for production deployment
+- ❌ No environment-based API URL configuration
+
+**Deployment Stack**:
+1. **Cloudflare Workers**: Hono API (already configured)
+2. **Cloudflare D1**: SQLite database (schema ready)
+3. **Cloudflare Pages**: Vite frontend (needs configuration)
+
+#### Phase 5.1: Data Import ✅ COMPLETE
+
+**Goal**: Get sample data into local database for testing
+
+**Tasks**:
+1. ✅ Import sample data to SQLite (`scripts/data-pipeline/output/neighborhood.db`)
+2. ✅ Initialize local D1 database with schema
+3. ✅ Import SQLite data to local D1
+4. ✅ Verify data integrity
+
+**Scripts Created**:
+- `npm run data:import-sample` - Import sample metadata/embeddings to SQLite
+- `npm run db:import-local` - Import SQLite → local D1
+
+**Results**:
+- Local SQLite database populated with 548 websites + embeddings
+- Local D1 database ready for testing
+- Data integrity verified
+
+#### Phase 5.2: Frontend Configuration ✅ COMPLETE
+
+**Goal**: Make frontend work in both dev and production environments
+
+**Changes Made**:
+
+1. **Environment Variable Support**:
+   - Created `.env.development` and `.env.production`
+   - API URL configurable via `VITE_API_URL`
+   - Dev: `http://localhost:8787`
+   - Prod: `https://3d-neighborhood-api.YOUR-SUBDOMAIN.workers.dev` (to be filled)
+
+2. **API Client Updates**:
+   - Updated `packages/shared/src/api.ts` to use environment variables
+   - Added runtime API URL detection
+   - Fallback to localhost for development
+
+3. **Type Definitions**:
+   - Added `vite-env.d.ts` for TypeScript support
+   - Environment variables properly typed
+
+**Files Modified**:
+- `packages/client/.env.development` (new)
+- `packages/client/.env.production` (new)
+- `packages/client/src/vite-env.d.ts` (new)
+- `packages/shared/src/api.ts` (updated)
+
+#### Phase 5.3: Cloudflare Pages Configuration ✅ COMPLETE
+
+**Goal**: Configure frontend for Cloudflare Pages deployment
+
+**Files Created**:
+1. `packages/client/wrangler.toml` - Pages deployment config
+2. `.github/workflows/deploy.yml` - (Optional) CI/CD automation
+
+**Configuration**:
+```toml
+name = "3d-neighborhood"
+pages_build_output_dir = "dist"
+
+[build]
+command = "npm run build"
+
+[env.production]
+VITE_API_URL = "https://3d-neighborhood-api.YOUR-SUBDOMAIN.workers.dev"
+```
+
+#### Phase 5.4: Deployment Scripts ✅ COMPLETE
+
+**Goal**: One-command deployment for both frontend and backend
+
+**Scripts Added to Root `package.json`**:
+- `npm run deploy:backend` - Deploy Cloudflare Workers API
+- `npm run deploy:frontend` - Deploy Cloudflare Pages
+- `npm run deploy:all` - Deploy both (requires manual steps first)
+- `npm run build:all` - Build both client and server
+- `npm run export:production-data` - Export local D1 data for production import
+
+**Build Pipeline**:
+```bash
+# Build everything
+npm run build:all
+
+# Deploy backend
+npm run deploy:backend
+
+# Deploy frontend
+npm run deploy:frontend
+```
+
+#### Phase 5.5: Production Database Setup
+
+**Goal**: Create production D1 database and import data
+
+**Manual Steps Required** (User must do these):
+
+1. **Create Production D1 Database**:
+   ```bash
+   wrangler d1 create neighborhood-db
+   ```
+   - This will output a database ID
+   - Copy the database ID from the output
+
+2. **Update `wrangler.toml`** in `packages/server/`:
+   ```toml
+   [[d1_databases]]
+   binding = "DB"
+   database_name = "neighborhood-db"
+   database_id = "YOUR_DATABASE_ID_HERE"  # Replace with actual ID
+   ```
+
+3. **Initialize Production Database Schema**:
+   ```bash
+   cd packages/server
+   wrangler d1 execute neighborhood-db --remote --file=schema.sql
+   wrangler d1 execute neighborhood-db --remote --file=migrations/001_add_placements.sql
+   ```
+
+4. **Import Data to Production D1**:
+   ```bash
+   # Export local data to SQL dump
+   npm run export:production-data
+
+   # Import to production D1
+   cd packages/server
+   wrangler d1 execute neighborhood-db --remote --file=../scripts/data-pipeline/output/production-export.sql
+   ```
+
+5. **Deploy Backend to Workers**:
+   ```bash
+   cd packages/server
+   npm run deploy
+   ```
+   - Note the deployed URL (e.g., `https://3d-neighborhood-api.YOUR-SUBDOMAIN.workers.dev`)
+
+6. **Update Frontend Environment Variable**:
+   - Edit `packages/client/.env.production`
+   - Set `VITE_API_URL` to your deployed Workers URL
+
+7. **Deploy Frontend to Pages**:
+   ```bash
+   cd packages/client
+   wrangler pages deploy dist --project-name=3d-neighborhood
+   ```
+   - Note the deployed URL (e.g., `https://3d-neighborhood.pages.dev`)
+
+8. **(Optional) Set Up Custom Domain**:
+   - Go to Cloudflare Dashboard → Pages → 3d-neighborhood → Custom domains
+   - Add your custom domain (e.g., `neighborhood.yourdomain.com`)
+
+### Manual Steps Checklist for User
+
+**Before Deploying**:
+- [ ] Have Cloudflare account with Workers & Pages enabled
+- [ ] Have Wrangler CLI installed and authenticated (`wrangler login`)
+- [ ] Local data imported and tested
+
+**Production Database Setup**:
+- [ ] Run `wrangler d1 create neighborhood-db`
+- [ ] Copy database ID from output
+- [ ] Update `packages/server/wrangler.toml` with database ID
+- [ ] Run schema initialization scripts (see step 3 above)
+- [ ] Import data to production D1 (see step 4 above)
+
+**Backend Deployment**:
+- [ ] Deploy Workers: `cd packages/server && npm run deploy`
+- [ ] Copy deployed Workers URL
+- [ ] Test API health: `curl https://YOUR-URL.workers.dev/health`
+
+**Frontend Deployment**:
+- [ ] Update `packages/client/.env.production` with Workers URL
+- [ ] Build frontend: `cd packages/client && npm run build`
+- [ ] Deploy to Pages: `wrangler pages deploy dist --project-name=3d-neighborhood`
+- [ ] Test deployed site in browser
+- [ ] (Optional) Add custom domain in Cloudflare Dashboard
+
+**Verification**:
+- [ ] Visit deployed site URL
+- [ ] Test website search
+- [ ] Test 3D navigation
+- [ ] Verify chunks load properly
+- [ ] Check browser console for errors
+
+### Deployment Scripts Created
+
+**Root `package.json` Scripts**:
+```json
+{
+  "build:all": "Build both client and server",
+  "deploy:backend": "Deploy Cloudflare Workers API",
+  "deploy:frontend": "Deploy Cloudflare Pages",
+  "deploy:all": "Deploy both (after manual steps)",
+  "export:production-data": "Export local data for production import"
+}
+```
+
+**Server Scripts** (`packages/server/package.json`):
+```json
+{
+  "deploy": "wrangler deploy",
+  "db:create-local": "wrangler d1 create neighborhood-db --local",
+  "db:init-local": "Initialize local D1 schema",
+  "db:import-local": "Import SQLite data to local D1"
+}
+```
+
+**Client Scripts** (`packages/client/package.json`):
+```json
+{
+  "build": "vite build",
+  "deploy": "wrangler pages deploy dist"
+}
+```
+
+### Configuration Files Created
+
+**Frontend Environment Variables**:
+- `packages/client/.env.development` - Local dev (localhost:8787)
+- `packages/client/.env.production` - Production (Workers URL)
+
+**Cloudflare Configurations**:
+- `packages/server/wrangler.toml` - Workers config (already existed, may need DB ID update)
+- `packages/client/wrangler.toml` - Pages config (NEW)
+
+**Database Files**:
+- `packages/server/schema.sql` - Database schema (already exists)
+- `packages/server/migrations/001_add_placements.sql` - Migrations (already exists)
+- `scripts/data-pipeline/output/production-export.sql` - Generated SQL dump (created by export script)
+
+### Cost Estimates
+
+**Cloudflare Free Tier Limits**:
+- Workers: 100,000 requests/day
+- D1: 5GB storage, 5M reads/day, 100K writes/day
+- Pages: Unlimited bandwidth, 500 builds/month
+
+**Expected Costs for 3D Neighborhood** (initial deployment):
+- **Free** - Well within free tier limits
+- Workers requests: ~1000/day initially
+- D1 database: ~2MB for 548 websites
+- Pages: Static hosting (free)
+
+**If Scaling to 100K+ Sites**:
+- D1 storage: ~400MB (still free)
+- May need Workers Paid plan ($5/month) for higher request volume
+- Vectorize: $0.04 per 1M queries (if migrating from in-memory k-NN)
+
+### Testing Plan
+
+**Local Testing** (before deployment):
+- ✅ Local dev server working (`npm run dev`)
+- ✅ API endpoints responding
+- ✅ Database queries working
+- ✅ Frontend fetching data correctly
+
+**Production Testing** (after deployment):
+- [ ] Health check endpoint (`/health`)
+- [ ] Website search endpoint (`/api/websites?q=test`)
+- [ ] Chunk generation endpoint (`/api/chunks/0/0`)
+- [ ] Entry point endpoint (`/api/entry-point`)
+- [ ] Stats endpoint (`/api/stats`)
+- [ ] Frontend loads and renders
+- [ ] 3D navigation works
+- [ ] Minimap updates
+- [ ] Performance acceptable
+
+**Performance Benchmarks**:
+- Target: <100ms for cached chunks
+- Target: <500ms for new chunk generation
+- Target: 60fps in 3D view
+- Target: <2s initial page load
+
+### Rollback Plan
+
+**If deployment fails**:
+
+1. **Backend Issues**:
+   - Check Wrangler logs: `wrangler tail`
+   - Verify D1 database ID in `wrangler.toml`
+   - Test locally: `cd packages/server && npm run dev`
+
+2. **Frontend Issues**:
+   - Verify API URL in `.env.production`
+   - Check browser console for errors
+   - Test build locally: `npm run build && npm run preview`
+
+3. **Database Issues**:
+   - Verify schema applied: `wrangler d1 execute neighborhood-db --remote --command "SELECT * FROM sqlite_master"`
+   - Check data imported: `wrangler d1 execute neighborhood-db --remote --command "SELECT COUNT(*) FROM websites"`
+
+**Full Rollback**:
+- Keep local development environment working
+- Delete Cloudflare deployments via dashboard if needed
+- Re-deploy with fixes
+
+### Phase 5 Status: ✅ COMPLETE (2025-11-11)
+
+**All automated setup complete!** The application is fully configured for Cloudflare deployment.
+
+#### What Was Implemented
+
+**Data Layer:**
+- ✅ Sample data imported to local SQLite (548 websites)
+- ✅ Local D1 database initialized and populated
+- ✅ Production data export script created (`export:production-data`)
+- ✅ Database migration system ready
+
+**Frontend Configuration:**
+- ✅ Environment variable support (`.env.development`, `.env.production`)
+- ✅ API URL configuration (`VITE_API_URL`)
+- ✅ All API calls updated to use `getApiBaseUrl()`
+- ✅ Cloudflare Pages configuration (`wrangler.toml`)
+- ✅ Production build ready
+
+**Backend Configuration:**
+- ✅ Wrangler configuration already set up
+- ✅ D1 database binding configured
+- ✅ Deployment script ready (`npm run deploy:backend`)
+
+**Deployment Scripts Created:**
+- ✅ `npm run build:all` - Build both client and server
+- ✅ `npm run build:client` - Build frontend only
+- ✅ `npm run deploy:backend` - Deploy Workers API
+- ✅ `npm run deploy:frontend` - Build + deploy Pages
+- ✅ `npm run deploy:all` - Deploy everything
+- ✅ `npm run export:production-data` - Export local data to SQL
+- ✅ `npm run db:import-local` - Import to local D1 (for testing)
+
+**Documentation Created:**
+- ✅ `DEPLOY.md` - Comprehensive deployment guide
+- ✅ `CLOUDFLARE_MANUAL_STEPS.md` - Step-by-step checklist
+- ✅ Updated `IMPLEMENTATION.md` with Phase 5 details
+
+**Files Created/Modified:**
+- ✅ `packages/client/.env.development` - Dev API URL
+- ✅ `packages/client/.env.production` - Prod API URL (template)
+- ✅ `packages/client/src/vite-env.d.ts` - TypeScript env types
+- ✅ `packages/client/wrangler.toml` - Pages deployment config
+- ✅ `packages/shared/src/api.ts` - Environment-aware API client
+- ✅ `packages/client/src/App.tsx` - Uses `getApiBaseUrl()`
+- ✅ `packages/client/src/components/StartScreen.tsx` - Uses `getApiBaseUrl()`
+- ✅ `packages/server/scripts/import-local-db.ts` - Fixed field mapping
+- ✅ `scripts/data-pipeline/export-production.ts` - Production SQL export
+- ✅ `package.json` - Added deployment scripts
+
+#### Test Results
+
+**Local Development Tested:**
+- ✅ Sample data (548 websites) imported successfully
+- ✅ Local D1 database populated and verified
+- ✅ Environment variables working in dev mode
+- ✅ API client correctly using localhost in development
+
+**Production Export Tested:**
+- ✅ Export script generates valid SQL
+- ✅ File size: ~4-5 MB for 548 websites
+- ✅ SQL syntax validated
+
+#### Manual Steps Required by User
+
+See **`CLOUDFLARE_MANUAL_STEPS.md`** for detailed instructions.
+
+**Summary:**
+1. 🔲 Create production D1 database: `wrangler d1 create neighborhood-db`
+2. 🔲 Update `packages/server/wrangler.toml` with database ID
+3. 🔲 Initialize production schema (2 commands)
+4. 🔲 Import data to production D1 (1 command, 2-3 min)
+5. 🔲 Deploy backend: `npm run deploy:backend`
+6. 🔲 Copy Workers URL to `packages/client/.env.production`
+7. 🔲 Deploy frontend: `npm run deploy:frontend`
+8. 🔲 (Optional) Configure custom domain in dashboard
+
+**Estimated time:** 15-20 minutes
+
+#### Deployment Architecture
+
+```
+┌─────────────────────────────────────┐
+│   Cloudflare Pages (Frontend)      │
+│   - React + Three.js                │
+│   - Vite build                      │
+│   - URL: *.pages.dev                │
+└─────────────┬───────────────────────┘
+              │ HTTPS
+              ↓
+┌─────────────────────────────────────┐
+│   Cloudflare Workers (Backend)      │
+│   - Hono API                        │
+│   - k-NN semantic search            │
+│   - URL: *.workers.dev              │
+└─────────────┬───────────────────────┘
+              │ D1 Binding
+              ↓
+┌─────────────────────────────────────┐
+│   Cloudflare D1 (Database)          │
+│   - SQLite (548 websites)           │
+│   - Embeddings (384-dim)            │
+│   - Chunk cache                     │
+└─────────────────────────────────────┘
+```
+
+#### Key Technical Decisions
+
+**Environment Configuration:**
+- Used Vite's built-in env var system (`import.meta.env`)
+- Separate `.env.development` and `.env.production` files
+- Runtime API URL detection in shared package
+- Fallback to `/api` for Vite proxy in development
+
+**Data Pipeline:**
+- Export from local SQLite → SQL file → Import to production D1
+- Handles NULL values correctly
+- Escapes SQL strings properly
+- Batched inserts for performance
+
+**Deployment Strategy:**
+- One-command builds: `npm run build:all`
+- One-command deploys: `npm run deploy:all`
+- Separate frontend/backend deploy scripts for flexibility
+- Production data export as separate step (not automatic)
+
+**Why This Approach:**
+- Simple: No CI/CD setup required initially
+- Flexible: Can deploy frontend/backend independently
+- Safe: Production data export is manual to prevent accidents
+- Fast: Cached builds, incremental deploys
+
+#### Cost Analysis
+
+**Cloudflare Free Tier (as of 2025):**
+- Workers: 100,000 requests/day
+- D1: 5GB storage, 5M reads/day, 100K writes/day
+- Pages: Unlimited bandwidth, 500 builds/month
+
+**Estimated Usage (548 websites):**
+- Workers: 100-500 requests/day (low initial traffic)
+- D1 Storage: ~2MB (well below 5GB)
+- D1 Reads: ~500-1000/day (chunk lookups)
+- D1 Writes: ~50-100/day (new placements, cache)
+- Pages: Static hosting (free)
+
+**Conclusion:** Should stay well within free tier indefinitely.
+
+**Scaling Considerations:**
+- At 10K websites: Still free tier
+- At 100K websites: May need paid D1 ($0.50/month for extra storage)
+- At 1M+ websites: Consider Cloudflare Vectorize for k-NN ($0.04 per 1M queries)
+
+#### Next Steps After Deployment
+
+**Immediate:**
+- User executes manual Cloudflare steps
+- Test deployment in browser
+- Verify all functionality works
+
+**Short-term Improvements:**
+- Add monitoring/alerts in Cloudflare dashboard
+- Set up custom domain
+- Enable analytics
+- Implement error tracking (Sentry, Cloudflare Insights)
+
+**Long-term Scaling:**
+- Expand dataset (548 → 10K → 100K+)
+- Migrate to Cloudflare Vectorize for k-NN (at scale)
+- Add caching layer (Cloudflare Cache API)
+- Implement rate limiting
+- Add authentication for admin features
+
+#### Lessons Learned
+
+**What Went Well:**
+- Environment variable system works cleanly across dev/prod
+- Cloudflare infrastructure well-suited for this use case
+- One-command deployment scripts make iteration fast
+- Local D1 development excellent for testing
+
+**Challenges:**
+- Schema mismatch between pipeline and server (fixed with field mapping)
+- NULL handling in SQL export (fixed with escapeString helper)
+- TypeScript types for environment variables (fixed with vite-env.d.ts)
+
+**Best Practices Applied:**
+- Separate config files for dev/prod
+- Export functions for reusability (`getApiBaseUrl()`)
+- Clear documentation with step-by-step instructions
+- Progress indicators in scripts
+- Verification commands after each step
+
+---

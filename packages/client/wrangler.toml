@@ -1,0 +1,8 @@
+# Cloudflare Pages configuration for 3D Neighborhood frontend
+name = "3d-neighborhood"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-01-01"
+
+# Note: Pages deployment is handled via CLI or dashboard
+# Build command: npm run build
+# Root directory: packages/client

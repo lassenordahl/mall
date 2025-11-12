@@ -2,6 +2,19 @@
  * Type-safe API contracts between client and server
  */
 
+/**
+ * Get the API base URL from environment variables or fall back to default
+ */
+export function getApiBaseUrl(): string {
+  // Check for Vite environment variable (client-side)
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // Fallback to /api for development with Vite proxy
+  return '/api';
+}
+
 export interface ChunkResponse {
   chunkX: number;
   chunkZ: number;
@@ -47,9 +60,10 @@ export interface ErrorResponse {
 export async function fetchChunk(
   cx: number,
   cz: number,
-  baseUrl = '/api'
+  baseUrl?: string
 ): Promise<ChunkWithMetadata> {
-  const url = `${baseUrl}/chunks/${cx}/${cz}`;
+  const apiBase = baseUrl || getApiBaseUrl();
+  const url = `${apiBase}/chunks/${cx}/${cz}`;
 
   const res = await fetch(url);
 
@@ -73,8 +87,9 @@ export async function fetchChunk(
 /**
  * Fetch world statistics
  */
-export async function fetchStats(baseUrl = '/api'): Promise<StatsResponse> {
-  const url = `${baseUrl}/stats`;
+export async function fetchStats(baseUrl?: string): Promise<StatsResponse> {
+  const apiBase = baseUrl || getApiBaseUrl();
+  const url = `${apiBase}/stats`;
   const res = await fetch(url);
 
   if (!res.ok) {

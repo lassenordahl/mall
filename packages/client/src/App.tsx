@@ -10,6 +10,7 @@ import { usePlayerPosition } from './hooks/usePlayerPosition';
 import * as THREE from 'three';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { BuildingData } from '@3d-neighborhood/shared';
+import { getApiBaseUrl } from '@3d-neighborhood/shared';
 
 interface SpawnPoint {
   position: [number, number, number];
@@ -55,7 +56,8 @@ function App() {
     try {
       console.log(`[App] Fetching entry point for URL: ${url}`);
       // Fetch entry point from API
-      const res = await fetch('/api/entry-point', {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/entry-point`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),

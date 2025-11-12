@@ -33,12 +33,12 @@ async function importData() {
   const websites = sourceDb.prepare(`
     SELECT
       url,
-      title,
-      description,
+      category as title,
+      semantic_description as description,
       embedding,
       embedding_dim,
       popularity_score,
-      scraped_at
+      generated_at as scraped_at
     FROM websites
   `).all();
 
@@ -51,11 +51,17 @@ async function importData() {
     // Convert embedding to hex string for BLOB
     const embeddingHex = site.embedding ? Buffer.from(site.embedding).toString('hex') : null;
 
+    // Safely escape strings with null checks
+    const escapeString = (str: string | null) => {
+      if (!str) return 'NULL';
+      return `'${str.replace(/'/g, "''")}'`;
+    };
+
     return `INSERT INTO websites (url, title, description, embedding, embedding_dim, popularity_score, scraped_at)
       VALUES (
-        '${site.url.replace(/'/g, "''")}',
-        ${site.title ? `'${site.title.replace(/'/g, "''")}'` : 'NULL'},
-        ${site.description ? `'${site.description.replace(/'/g, "''")}'` : 'NULL'},
+        ${escapeString(site.url)},
+        ${escapeString(site.title)},
+        ${escapeString(site.description)},
         ${embeddingHex ? `X'${embeddingHex}'` : 'NULL'},
         ${site.embedding_dim || 384},
         ${site.popularity_score || 0},

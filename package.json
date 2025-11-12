@@ -21,7 +21,14 @@
     "data:embed-full": "python3 -m modal run scripts/data-pipeline/modal_embeddings.py::embed_full",
     "data:import": "tsx scripts/data-pipeline/import-to-sqlite-v2.ts",
     "data:validate": "tsx scripts/data-pipeline/validate.ts",
-    "data:test-knn": "tsx scripts/data-pipeline/test-knn.ts"
+    "data:test-knn": "tsx scripts/data-pipeline/test-knn.ts",
+    "db:import-local": "npm run db:import-local --workspace=packages/server",
+    "build:all": "npm run build --workspace=packages/client && npm run build --workspace=packages/shared",
+    "build:client": "npm run build --workspace=packages/client",
+    "deploy:backend": "npm run deploy --workspace=packages/server",
+    "deploy:frontend": "npm run build --workspace=packages/client && cd packages/client && npx wrangler pages deploy dist --project-name=3d-neighborhood",
+    "deploy:all": "npm run deploy:backend && npm run deploy:frontend",
+    "export:production-data": "tsx scripts/data-pipeline/export-production.ts"
   },
   "dependencies": {
     "better-sqlite3": "^9.2.2"

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Input } from './ui/input';
 import { cn } from '@/lib/utils';
+import { getApiBaseUrl } from '@3d-neighborhood/shared';
 
 interface Website {
   url: string;
@@ -34,7 +35,8 @@ export function StartScreen({ onStart }: StartScreenProps) {
     const fetchResults = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/websites?q=${encodeURIComponent(query)}`);
+        const apiBase = getApiBaseUrl();
+        const res = await fetch(`${apiBase}/websites?q=${encodeURIComponent(query)}`);
         const data = await res.json();
         setResults(data);
         setSelectedIndex(0);
