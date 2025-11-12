@@ -1,8 +1,9 @@
 # 3D Neighborhood - Implementation Progress
 
 **Started**: 2025-11-08
-**Current Phase**: Phase 3 - Server + Database
-**Status**: ✅ Phase 0, 1 & 3 COMPLETE - Full stack working with real data!
+**Current Phase**: Phase 4 - Mall System Polish
+**Status**: ✅ Phase 0, 1, 2 & 3 COMPLETE - Full stack working with real data!
+**Focus**: Iterating on the mall experience with mock/existing data before scaling KNN
 
 ---
 
@@ -668,6 +669,229 @@ packages/shared/src/
 
 ---
 
+## Phase 4: Mall System Polish
+
+**Goal**: Improve the exploration and navigation experience with the existing 548-website dataset before scaling to full KNN implementation
+
+**Status**: 🚧 IN PROGRESS
+
+**Philosophy**: Focus on perfecting the "mall" experience - how users discover, navigate, and interact with websites in 3D space. Use mock values and existing data to iterate quickly on UX without building full KNN infrastructure yet.
+
+### Recent Improvements (2025-11-11)
+
+#### 1. ✅ Minimap with Real-Time Updates
+
+**Problem**: Minimap showed static spawn position, not dynamic player position
+
+**Solution**:
+- Updated `usePlayerPosition` hook integration
+- Converted position object `{ x, y, z, chunkX, chunkZ }` to array format `[x, y, z]`
+- Minimap now updates in real-time as player moves
+
+**Files Modified**:
+- `packages/client/src/App.tsx:224` - Pass dynamic `playerPosition` instead of static `spawnPoint.position`
+
+**Result**: Red player dot on minimap now tracks movement across chunk boundaries
+
+#### 2. ✅ Directional Compass Indicator
+
+**Problem**: No visual indication of which direction player is facing on minimap
+
+**Solution**:
+- Added camera rotation tracking in `Player.tsx`
+- Calculate yaw angle from camera direction vector
+- Pass rotation to Minimap via new `cameraYaw` prop
+- Render vision cone/fan on minimap canvas
+
+**Implementation Details**:
+- **Player.tsx**: Added `onRotationChange` callback, calculates `yaw = atan2(direction.x, direction.z)`
+- **App.tsx**: Track `cameraYaw` state, pass to both Player and Minimap
+- **Minimap.tsx**:
+  - Quarter-circle (90° arc) vision cone
+  - Radial gradient: opaque at center → transparent at edge
+  - 25-pixel radius fan
+  - Rotates in real-time with camera
+
+**Visual Design**:
+```typescript
+// Golden/yellow fan that fades out
+const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 25);
+gradient.addColorStop(0, 'rgba(255, 200, 0, 0.5)');   // bright center
+gradient.addColorStop(0.5, 'rgba(255, 200, 0, 0.25)'); // fade middle
+gradient.addColorStop(1, 'rgba(255, 200, 0, 0)');      // transparent edge
+```
+
+**Files Modified**:
+- `packages/client/src/components/Player.tsx:18,31,253-256` - Camera rotation tracking
+- `packages/client/src/App.tsx:34,155,227` - Rotation state management
+- `packages/client/src/components/Minimap.tsx:8,14,141-165,147` - Vision cone rendering
+
+**Result**: Player can see which direction they're facing on minimap with smooth rotation animation
+
+### Next Steps: Mall System Iteration
+
+**Strategy**: Keep using the 548-website dataset and focus on making the exploration experience great. Defer KNN improvements and dataset scaling until the core mall mechanics are solid.
+
+#### Priority 1: Navigation & Discovery 🎯
+
+**Dynamic Chunk Loading**:
+- [ ] Load chunks dynamically based on player position (currently loads 3×3 at spawn)
+- [ ] Unload distant chunks to maintain performance
+- [ ] Implement chunk loading radius (e.g., 2-3 chunks around player)
+- [ ] Add loading indicators for new chunks
+- [ ] Track "new chunks this session" statistic (already tracked, need to make useful)
+
+**Spawn & Entry Points**:
+- [x] Entry point API (`/api/entry-point`) working
+- [ ] Test entry point system with various URLs
+- [ ] Add "home" marker on minimap for spawn point
+- [ ] Breadcrumb trail or path showing where you've been
+- [ ] "Return to spawn" hotkey/button
+
+**World Navigation**:
+- [ ] Add coordinate display (current chunk, world position)
+- [ ] Search/teleport to specific websites
+- [ ] Minimap zoom controls
+- [ ] North indicator on minimap (static)
+- [ ] Chunk grid overlay on minimap (toggle)
+
+#### Priority 2: Building Interaction 🏢
+
+**Click/Collision Actions**:
+- [ ] Click building to open website in new tab
+- [ ] Or: Click to show preview modal with iframe
+- [ ] Collision detection already exists - add URL redirect on collision
+- [ ] Visual feedback when targeting building (already has crosshair change)
+- [ ] Building info panel (URL, title, semantic similarity score?)
+
+**Visual Feedback**:
+- [ ] Hover highlight on buildings (currently shows URL in top-right)
+- [ ] Distance-to-target display
+- [ ] Building labels that fade in when close
+- [ ] Visited buildings change color/style
+
+#### Priority 3: Visual Polish ✨
+
+**Building Details**:
+- [ ] Windows (grid pattern based on building dimensions)
+- [ ] Roof variations (flat, peaked, modern)
+- [ ] Building texture/materials (not just solid colors)
+- [ ] Ground floor distinction (darker, larger windows)
+- [ ] Building variety (not all cubes - some L-shaped, U-shaped?)
+
+**World Details**:
+- [ ] Actual road geometry (gray planes with line markings)
+- [ ] Sidewalks along roads
+- [ ] Street lights at intersections
+- [ ] Ground texture (subtle grid or pattern)
+- [ ] Sky gradient (white → light blue)
+
+**Lighting & Atmosphere**:
+- [ ] Time of day control (affects lighting/colors)
+- [ ] Building interior lighting (glowing windows at night)
+- [ ] Shadows (sun direction based on time of day)
+- [ ] Ambient occlusion for depth
+
+#### Priority 4: Performance & Scale 📈
+
+**Optimization**:
+- [ ] Test with more chunks visible (5×5, 7×7)
+- [ ] Implement LOD (Level of Detail) for distant buildings
+  - Close: Full detail with windows
+  - Medium: Simple geometry, solid colors
+  - Far: Instanced boxes
+- [ ] GPU instancing for building meshes
+- [ ] Frustum culling (Three.js may do this already)
+
+**Monitoring**:
+- [ ] FPS counter (add to stats panel)
+- [ ] Chunks loaded counter
+- [ ] Buildings rendered counter
+- [ ] Memory usage display
+
+#### Priority 5: UI/UX Improvements 🎨
+
+**HUD Enhancements**:
+- [ ] Better stats panel design
+- [ ] Hide/show UI toggle (for screenshots)
+- [ ] Settings panel (fog distance, render distance, etc.)
+- [ ] Help overlay (keybinds, controls)
+
+**Minimap Enhancements**:
+- [ ] Toggle minimap visibility
+- [ ] Minimap size adjustment
+- [ ] Click minimap to teleport (creative mode only?)
+- [ ] Show nearby building clusters (color by semantic group?)
+
+**Quality of Life**:
+- [ ] Sprint key (hold Shift to move faster)
+- [ ] Jump key (Space) - why not?
+- [ ] Crouch key (C) - lower camera
+- [ ] FOV slider
+- [ ] Mouse sensitivity adjustment
+
+### Mall System Design Questions
+
+**Interaction Model**:
+- Should buildings be clickable to visit URLs?
+- Or should collision trigger URL redirect?
+- Or both (click = new tab, collision = redirect)?
+- Should there be a preview mode before visiting?
+
+**Discovery Mechanics**:
+- How should semantic similarity be visualized?
+- Should similar buildings cluster spatially? (They should based on KNN)
+- Visual cues for "neighborhoods" of similar sites?
+- Color coding by category/similarity?
+
+**Navigation Philosophy**:
+- Encourage exploration vs. efficient search?
+- Should there be a "fast travel" system?
+- How to handle getting lost? (Always show spawn point?)
+- Balance between walking simulation and UX convenience
+
+**Scale & Scope**:
+- How many chunks should be explorable? (Infinite? Or bounded grid?)
+- What happens at world edges?
+- How to handle 548 websites → eventually 100K+ websites?
+
+### Testing Priorities
+
+**User Experience Tests**:
+1. Spawn at random building, try to find way back
+2. Visit 10 buildings via collision, measure time/ease
+3. Test minimap usefulness during exploration
+4. Identify confusing/frustrating moments
+
+**Performance Tests**:
+1. Render 5×5 chunks (25 chunks × 16 buildings = 400 buildings)
+2. Measure FPS with different fog distances
+3. Test chunk loading/unloading smoothness
+4. Profile memory usage over time
+
+**Visual Tests**:
+1. Compare building dimension options (width/height ranges)
+2. Test different color schemes for buildings
+3. Evaluate road visibility and navigation
+4. Test fog density for atmosphere vs. visibility
+
+### Phase 4 Status: 🚧 IN PROGRESS
+
+**Completed**:
+- ✅ Minimap real-time position tracking
+- ✅ Directional compass/vision cone on minimap
+
+**Current Focus**: Deciding on next iteration priorities
+
+**Deferred for Later**:
+- KNN improvements and optimization
+- Full dataset expansion (548 → 100K+)
+- Vectorize integration
+- Semantic similarity visualization
+- Advanced clustering algorithms
+
+---
+
 ## Notes & Decisions
 
 ### 2025-11-08 - Phase 0 Complete
@@ -722,52 +946,75 @@ packages/shared/src/
   - Later: Use adjacent chunks as anchors for better clustering
 - **Next**: Test semantic similarity in browser, validate clustering works
 
+### 2025-11-11 - Phase 4 Started: Mall System Focus
+- ✅ Fixed minimap to show real-time player position (was showing static spawn point)
+- ✅ Added directional compass indicator (vision cone that rotates with camera)
+- **Testing**: Minimap now updates when crossing chunk borders, compass shows orientation
+- **Visual Design**: Quarter-circle fan with radial gradient (golden yellow, fades to transparent)
+- **Decision**: Focus on "mall system" polish before scaling KNN
+  - Rationale: Better to perfect the exploration UX with existing 548 sites
+  - Defer dataset expansion and KNN optimization until core mechanics are solid
+  - Use mock values and iterate quickly on feel/navigation
+- **Decision**: Prioritize navigation aids and building interaction next
+  - Dynamic chunk loading based on player position
+  - Click/collision to visit websites
+  - Visual polish (windows, roads, better materials)
+  - Performance testing with more chunks
+- **Next Steps Documented**: Created comprehensive Phase 4 roadmap with 5 priority areas
+  1. Navigation & Discovery (dynamic loading, spawn markers, coordinates)
+  2. Building Interaction (click to visit, collision handling, info panels)
+  3. Visual Polish (windows, roads, lighting, textures)
+  4. Performance & Scale (LOD, instancing, monitoring)
+  5. UI/UX Improvements (stats, settings, quality of life features)
+
 ---
 
 ## Blockers & Questions
 
 None currently blocking progress.
 
-### Open Questions for Next Steps
+### Open Questions for Phase 4
 
-**Visual & Dimensions** (from Phase 1 feedback):
-- [ ] Building dimensions feel right? User mentioned "we should eventually work on the dimensions"
-  - Width range (15-28) - should this be wider/narrower?
-  - Height range (25-120) - should this be taller/shorter?
-  - Cell size (30 units) - should buildings be more spread out?
-  - Noise offset (±8 units) - should there be more/less organic variation?
+**Immediate Next Features** (Priority order for implementation):
+1. [ ] **Dynamic chunk loading** - Load/unload chunks based on player position?
+2. [ ] **Building interaction** - Click or collision to visit website?
+3. [ ] **Visual improvements** - Windows, roads, textures?
+4. [ ] **Performance testing** - How many chunks can we render smoothly?
 
-**Visual Polish** (Progressive improvements):
-- [ ] Add building details (windows, roofs, textures)?
-- [ ] Add visual road geometry (not just gaps)?
-- [ ] Improve building color variety/palette?
-- [ ] Add ground texture/grid?
-- [ ] Add building labels/tooltips on hover?
-- [ ] Add minimap or position indicator?
-- [ ] Add day/night cycle or sky gradient?
+**Design Decisions Needed**:
 
-**Performance & Scale**:
-- [ ] Test with more chunks (5×5, 7×7) - how does it perform?
-- [ ] Add LOD (Level of Detail) for distant buildings?
-- [ ] Add instancing for repeated geometry?
-- [ ] Chunk loading/unloading based on player position?
+**Building Interaction Model**:
+- How should users visit websites?
+  - Option A: Click building to open in new tab
+  - Option B: Collision redirects to URL
+  - Option C: Both (click = new tab, collision = redirect)
+  - Option D: Preview modal first, then visit
+- Current: Collision detection exists but no action taken
 
-**Path Forward**:
-- [ ] **Option A**: Polish Phase 1 visuals before moving on?
-- [ ] **Option B**: Move to Phase 2 (data pipeline - scraping, embeddings)?
-- [ ] **Option C**: Move to Phase 3 (server + API + database)?
-- [ ] **Option D**: Tune parameters and test different configurations?
+**Visual Style Direction**:
+- Building dimensions: Keep current ranges (W: 15-28, H: 25-120) or adjust?
+- Color scheme: Keep HSL variety or use semantic categories?
+- Road visualization: Add actual geometry or keep as gaps?
+- Windows: Simple grid pattern or detailed/random?
+- Overall aesthetic: Minimal/clean vs. detailed/realistic?
 
-**Phase 2 Decisions** (if going that route):
-- [ ] Use Tranco Top 1M list as planned?
-- [ ] Which embedding model? (all-MiniLM-L6-v2 as spec suggests?)
-- [ ] Run embeddings locally or use Modal.com with $30 credit?
-- [ ] How many websites to start with? (1000? 10,000? Full 1M?)
+**Navigation Philosophy**:
+- Encourage wandering/exploration vs. efficient search?
+- Fast travel system or pure walking simulation?
+- How to handle getting lost? (Show spawn point? Breadcrumbs?)
+- Balance realism vs. convenience
 
-**Phase 3 Decisions** (if going that route):
-- [ ] Set up Cloudflare Workers + D1 now?
-- [ ] Keep client-side generation for testing, add server in parallel?
-- [ ] Migration strategy: all at once or gradual?
+**Scale & Performance**:
+- Target render distance: How many chunks? (Current: 3×3 at spawn)
+- Dynamic loading radius: 2 chunks? 3 chunks?
+- LOD implementation priority: Now or later?
+- FPS target: 60fps? 30fps acceptable?
+
+**Deferred Questions** (Not blocking current work):
+- Dataset expansion strategy (548 → 100K+)
+- Semantic similarity visualization improvements
+- KNN optimization and Vectorize migration
+- Cloud deployment and scaling
 
 ---
 
@@ -870,20 +1117,47 @@ lsof -ti:3000 | xargs kill
 
 ✅ **Phase 1 - 3D Visualization**:
 - React + Three.js client
-- 144 buildings rendering (3×3 chunks)
 - WASD + mouse controls
 - Fog atmosphere (white, 150-300 units)
 - Deterministic building colors (HSL from URL)
 - 60fps performance
 
-### What's Next (User Decision)
+✅ **Phase 2 - Data Pipeline**:
+- 548 websites scraped from Tranco Top 1M
+- GPU-accelerated embeddings (384-dimensional vectors)
+- SQLite database with semantic embeddings
+- Modal.com pipeline (~$0.03 cost)
 
-The system is ready for:
-1. **Visual Polish** - Dimensions, details, textures
-2. **Phase 2** - Data pipeline (scraping, embeddings)
-3. **Phase 3** - Server + API + Database
+✅ **Phase 3 - Full Stack**:
+- Cloudflare Workers + D1 database
+- Hono API server with type-safe endpoints
+- In-memory k-NN semantic similarity
+- Chunk caching (52ms uncached, 2-5ms cached)
+- Client-server integration via Vite proxy
+- Entry point system for spawning at specific URLs
 
-Waiting for user direction on priorities.
+✅ **Phase 4 - Mall System Polish** (IN PROGRESS):
+- Real-time minimap with position tracking
+- Directional compass/vision cone indicator
+- Minimap updates on chunk border crossing
+
+### What's Next
+
+**Current Focus**: Phase 4 - Mall System Iteration
+
+**Strategy**: Perfect the exploration experience with existing 548-site dataset before scaling KNN infrastructure
+
+**Priority Areas**:
+1. **Navigation & Discovery** - Dynamic chunk loading, spawn markers, coordinate display
+2. **Building Interaction** - Click/collision to visit websites, info panels
+3. **Visual Polish** - Windows, roads, lighting, better materials
+4. **Performance** - LOD, instancing, monitoring
+5. **UI/UX** - Settings, stats, quality of life features
+
+**Deferred**:
+- Dataset expansion (548 → 100K+)
+- KNN optimization and Vectorize integration
+- Advanced semantic similarity features
 
 ### Key Files
 

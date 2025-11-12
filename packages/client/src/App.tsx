@@ -31,6 +31,7 @@ function App() {
 
   // Track player position for dynamic chunk loading
   const { position: playerPosition, updatePosition } = usePlayerPosition();
+  const [cameraYaw, setCameraYaw] = useState<number>(0);
 
   // Check for URL parameters on mount
   useEffect(() => {
@@ -151,6 +152,7 @@ function App() {
           spawnPoint={spawnPoint}
           noclip={noclip}
           onPositionChange={updatePosition}
+          onRotationChange={setCameraYaw}
         />
       </Canvas>
 
@@ -221,7 +223,8 @@ function App() {
       {/* Minimap - bottom right */}
       <Minimap
         newChunkKeys={newChunkKeysRef.current}
-        playerPosition={spawnPoint.position}
+        playerPosition={playerPosition ? [playerPosition.x, playerPosition.y, playerPosition.z] : spawnPoint.position}
+        cameraYaw={cameraYaw}
       />
 
       {/* Debug panel - moved to avoid stats panel */}

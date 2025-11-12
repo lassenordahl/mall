@@ -15,6 +15,7 @@ interface PlayerProps {
   spawnPoint?: SpawnPoint;
   noclip?: boolean;
   onPositionChange?: (x: number, y: number, z: number) => void;
+  onRotationChange?: (yaw: number) => void;
 }
 
 /**
@@ -27,7 +28,7 @@ interface PlayerProps {
  *
  * Includes collision detection with buildings
  */
-export function Player({ buildings, onTargetChange, spawnPoint, noclip = false, onPositionChange }: PlayerProps) {
+export function Player({ buildings, onTargetChange, spawnPoint, noclip = false, onPositionChange, onRotationChange }: PlayerProps) {
   const { camera, scene } = useThree();
   const velocity = useRef(new THREE.Vector3());
   const direction = useRef(new THREE.Vector3());
@@ -248,6 +249,11 @@ export function Player({ buildings, onTargetChange, spawnPoint, noclip = false, 
 
     // Notify position change for chunk loading
     onPositionChange?.(camera.position.x, camera.position.y, camera.position.z);
+
+    // Notify rotation change for minimap compass
+    // Calculate yaw (horizontal rotation) from camera direction
+    const yaw = Math.atan2(direction.current.x, direction.current.z);
+    onRotationChange?.(yaw);
 
     // Throttled raycast - only check every 150ms instead of every frame (60fps)
     const currentTime = Date.now();

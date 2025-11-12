@@ -5,12 +5,13 @@ import type { StatsResponse } from '@3d-neighborhood/shared/api';
 interface MinimapProps {
   newChunkKeys: string[]; // Array of "x,z" keys for new chunks
   playerPosition?: [number, number, number]; // [x, y, z] in world coords
+  cameraYaw?: number; // Camera rotation in radians
 }
 
 const MINIMAP_SIZE = 250; // pixels
 const CELL_SIZE = 8; // pixels per chunk
 
-export function Minimap({ newChunkKeys, playerPosition }: MinimapProps) {
+export function Minimap({ newChunkKeys, playerPosition, cameraYaw = 0 }: MinimapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stats, setStats] = useState<StatsResponse | null>(null);
 
@@ -46,7 +47,40 @@ export function Minimap({ newChunkKeys, playerPosition }: MinimapProps) {
     ctx.fillRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
 
     const { chunkBounds, chunkCoords } = stats;
-    const { minX, maxX, minZ, maxZ } = chunkBounds;
+
+    // Parse newChunkKeys into coordinates
+    const newChunkCoords = newChunkKeys.map(key => {
+      const [x, z] = key.split(',').map(Number);
+      return [x, z] as [number, number];
+    });
+
+    // Combine all chunks (from stats + new chunks not yet in DB)
+    const allChunkCoordsMap = new Map<string, [number, number]>();
+
+    // Add chunks from stats
+    for (const coord of chunkCoords) {
+      allChunkCoordsMap.set(`${coord[0]},${coord[1]}`, coord);
+    }
+
+    // Add new chunks (may overlap with stats, that's ok)
+    for (const coord of newChunkCoords) {
+      allChunkCoordsMap.set(`${coord[0]},${coord[1]}`, coord);
+    }
+
+    const allChunkCoords = Array.from(allChunkCoordsMap.values());
+
+    // Recalculate bounds including new chunks
+    let minX = chunkBounds.minX;
+    let maxX = chunkBounds.maxX;
+    let minZ = chunkBounds.minZ;
+    let maxZ = chunkBounds.maxZ;
+
+    if (allChunkCoords.length > 0) {
+      minX = Math.min(...allChunkCoords.map(c => c[0]));
+      maxX = Math.max(...allChunkCoords.map(c => c[0]));
+      minZ = Math.min(...allChunkCoords.map(c => c[1]));
+      maxZ = Math.max(...allChunkCoords.map(c => c[1]));
+    }
 
     // Calculate grid dimensions
     const gridWidth = maxX - minX + 1;
@@ -64,7 +98,7 @@ export function Minimap({ newChunkKeys, playerPosition }: MinimapProps) {
     const newChunksSet = new Set(newChunkKeys);
 
     // Draw all chunks
-    for (const [cx, cz] of chunkCoords) {
+    for (const [cx, cz] of allChunkCoords) {
       const x = offsetX + (cx - minX) * scale;
       const y = offsetY + (cz - minZ) * scale;
 
@@ -103,6 +137,31 @@ export function Minimap({ newChunkKeys, playerPosition }: MinimapProps) {
       ctx.beginPath();
       ctx.arc(px, py, 3, 0, Math.PI * 2);
       ctx.stroke();
+
+      // Draw directional indicator (vision cone/fan)
+      const coneRadius = 25;
+      const coneAngle = Math.PI / 2; // 90 degrees (quarter circle)
+
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(cameraYaw);
+
+      // Create radial gradient for fading effect
+      const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, coneRadius);
+      gradient.addColorStop(0, 'rgba(255, 200, 0, 0.5)'); // bright at center
+      gradient.addColorStop(0.5, 'rgba(255, 200, 0, 0.25)'); // fade
+      gradient.addColorStop(1, 'rgba(255, 200, 0, 0)'); // transparent at edge
+
+      // Draw cone/fan shape
+      ctx.beginPath();
+      ctx.moveTo(0, 0); // start at player position
+      ctx.arc(0, 0, coneRadius, -coneAngle / 2, coneAngle / 2, false);
+      ctx.closePath();
+
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      ctx.restore();
     }
 
     // Draw border around minimap
@@ -110,7 +169,7 @@ export function Minimap({ newChunkKeys, playerPosition }: MinimapProps) {
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
 
-  }, [stats, newChunkKeys, playerPosition]);
+  }, [stats, newChunkKeys, playerPosition, cameraYaw]);
 
   return (
     <div
