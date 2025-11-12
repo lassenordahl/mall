@@ -13,17 +13,20 @@ const __dirname = path.dirname(__filename);
 const DB_PATH = path.join(__dirname, 'output', 'neighborhood.db');
 
 interface EmbeddingData {
-  domain: string;
+  url?: string;          // New format
+  domain?: string;       // Old format - keep for compatibility
+  title?: string;        // New format
+  category?: string;     // Old format - keep for compatibility
+  description?: string;  // New format
+  semantic_description?: string; // Old format - keep for compatibility
 
-  // Structured semantic data
-  category?: string;
+  // Structured semantic data (old format)
   subcategories?: string[];
   purpose?: string;
   audience?: string;
   content_types?: string[];
   primary_topics?: string[];
   tone?: string;
-  semantic_description?: string;
 
   // Metadata
   data_source?: string;
@@ -75,16 +78,21 @@ async function importEmbeddings(inputFile: string, isSample: boolean = false) {
 
   const insertMany = db.transaction((items: EmbeddingData[]) => {
     for (const item of items) {
+      // Support both old format (domain, category, semantic_description) and new format (url, title, description)
+      const url = item.url || item.domain;
+      const title = item.title || item.category;
+      const description = item.description || item.semantic_description;
+
       insertStmt.run(
-        item.domain,
-        item.category || null,
+        url,
+        title || null,
         item.subcategories ? JSON.stringify(item.subcategories) : null,
         item.purpose || null,
         item.audience || null,
         item.content_types ? JSON.stringify(item.content_types) : null,
         item.primary_topics ? JSON.stringify(item.primary_topics) : null,
         item.tone || null,
-        item.semantic_description || null,
+        description || null,
         deserializeEmbedding(item.embedding),
         item.embedding_dim,
         item.embedding_model,

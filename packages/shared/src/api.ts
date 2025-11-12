@@ -7,8 +7,8 @@
  */
 export function getApiBaseUrl(): string {
   // Check for Vite environment variable (client-side)
-  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) {
+    return (import.meta as any).env.VITE_API_URL;
   }
 
   // Fallback to /api for development with Vite proxy

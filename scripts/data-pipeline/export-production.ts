@@ -75,11 +75,7 @@ VALUES (
 -- Total websites: ${websites.length}
 
 -- Import websites data
-BEGIN TRANSACTION;
-
 ${insertStatements}
-
-COMMIT;
 
 -- Verify import
 SELECT COUNT(*) as total_websites FROM websites;

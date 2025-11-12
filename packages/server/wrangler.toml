@@ -6,7 +6,7 @@ compatibility_date = "2024-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "neighborhood-db"
-database_id = "local-dev-db-id" # Placeholder for local development
+database_id = "7b6b4fff-9203-4c1b-91c9-adac51db1e81"
 
 # Local development settings
 [env.local]

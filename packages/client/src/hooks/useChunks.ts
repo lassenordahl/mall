@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchChunk } from '@3d-neighborhood/shared/api';
-import type { ChunkResponse, ChunkWithMetadata } from '@3d-neighborhood/shared/api';
+import type { ChunkResponse } from '@3d-neighborhood/shared/api';
 import type { PlayerPosition } from './usePlayerPosition';
 
 // Chunk system constants (must match server-side)
@@ -33,8 +33,7 @@ export function useChunks(
   playerPosition?: PlayerPosition
 ): ChunkResponse[] {
   const [chunkMap, setChunkMap] = useState<Map<string, ChunkResponse>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [_loading, setLoading] = useState(true);
   const loadedChunks = useRef<Set<string>>(new Set());
   const isLoadingChunk = useRef<Set<string>>(new Set());
 

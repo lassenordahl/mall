@@ -36,7 +36,7 @@ export function StartScreen({ onStart }: StartScreenProps) {
       setLoading(true);
       try {
         const apiBase = getApiBaseUrl();
-        const res = await fetch(`${apiBase}/websites?q=${encodeURIComponent(query)}`);
+        const res = await fetch(`${apiBase}/api/websites?q=${encodeURIComponent(query)}`);
         const data = await res.json();
         setResults(data);
         setSelectedIndex(0);

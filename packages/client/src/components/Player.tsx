@@ -195,7 +195,7 @@ export function Player({ buildings, onTargetChange, spawnPoint, noclip = false, 
   };
 
   // Update movement each frame
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     const speed = 50; // units per second
     const moveSpeed = speed * delta;
 
