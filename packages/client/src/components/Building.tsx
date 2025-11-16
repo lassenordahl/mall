@@ -3,10 +3,18 @@ import { DEFAULT_WORLD_CONFIG, BuildingType } from '@3d-neighborhood/shared';
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { Billboard } from './Billboard';
+import { GhostBillboard } from './GhostBillboard';
 
 interface BuildingProps {
   building: BuildingData;
   type?: BuildingType;
+  ghostBillboard?: {
+    face: 'north' | 'south' | 'east' | 'west' | 'top';
+    positionX: number;
+    positionY: number;
+    width: number;
+    height: number;
+  } | null;
 }
 
 /**
@@ -21,7 +29,7 @@ interface BuildingProps {
  *   - ANCHOR: Blue edges (future)
  *   - HIGHLIGHTED: Yellow edges (future)
  */
-export function Building({ building, type = BuildingType.NORMAL }: BuildingProps) {
+export function Building({ building, type = BuildingType.NORMAL, ghostBillboard }: BuildingProps) {
   // Position at worldX/worldZ, with building centered on ground (y = height/2)
   const x = building.worldX;
   const y = building.height / 2;
@@ -71,7 +79,17 @@ export function Building({ building, type = BuildingType.NORMAL }: BuildingProps
       </group>
 
       {/* Render billboard if purchased */}
-      {building.billboard && <Billboard building={building} billboard={building.billboard} />}
+      {(building as any).billboard && <Billboard building={building} billboard={(building as any).billboard} />}
+
+      {/* Render ghost billboard preview if hovering in billboard mode */}
+      {ghostBillboard && (
+        <GhostBillboard
+          building={building}
+          face={ghostBillboard.face}
+          positionX={ghostBillboard.positionX}
+          positionY={ghostBillboard.positionY}
+        />
+      )}
     </>
   );
 }

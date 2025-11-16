@@ -1,7 +1,21 @@
-import type { BillboardData, BuildingData } from '@3d-neighborhood/shared';
+import type { BuildingData } from '@3d-neighborhood/shared';
 import { useTexture } from '@react-three/drei';
 import { useMemo } from 'react';
 import * as THREE from 'three';
+
+interface BillboardData {
+  id: number;
+  buildingUrl: string;
+  face: 'north' | 'south' | 'east' | 'west' | 'top';
+  positionX: number;
+  positionY: number;
+  width: number;
+  height: number;
+  imageUrl: string | null;
+  ownerUserId: number | null;
+  purchasedAt: string | null;
+  expiresAt: string | null;
+}
 
 interface BillboardProps {
   building: BuildingData;
@@ -19,7 +33,7 @@ function calculateBillboardTransform(
   rotation: [number, number, number];
 } {
   const { worldX, worldZ, width, height } = building;
-  const { face, positionX, positionY, width: bWidth, height: bHeight } = billboard;
+  const { face, positionX, positionY } = billboard;
 
   const baseY = 0; // Ground level
   const halfWidth = width / 2;
@@ -61,6 +75,7 @@ function calculateBillboardTransform(
         ],
         rotation: [0, Math.PI / 2, 0], // Face toward +X
       };
+    default:
     case 'top': // +Y face (roof)
       return {
         position: [
@@ -105,7 +120,7 @@ export function Billboard({ building, billboard }: BillboardProps) {
   // Adjust position to offset from wall - move AWAY from building center
   const offsetPosition = useMemo(() => {
     const [x, y, z] = position;
-    const [rx, ry, rz] = rotation;
+    const [, ry] = rotation;
 
     // Calculate normal direction based on face rotation
     // We need to move in the direction the billboard is FACING (away from wall)

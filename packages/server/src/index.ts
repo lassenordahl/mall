@@ -691,4 +691,95 @@ async function generateChunk(
   };
 }
 
+/**
+ * Create/purchase a billboard
+ * POST /api/billboards
+ */
+app.post('/api/billboards', async (c) => {
+  const { buildingUrl, face, positionX, positionY, width, height, imageUrl } = await c.req.json<{
+    buildingUrl: string;
+    face: 'north' | 'south' | 'east' | 'west' | 'top';
+    positionX: number;
+    positionY: number;
+    width: number;
+    height: number;
+    imageUrl?: string | null;
+  }>();
+
+  // Validation
+  if (!buildingUrl || !face || positionX === undefined || positionY === undefined || !width || !height) {
+    return c.json({ error: 'Missing required fields' }, 400);
+  }
+
+  if (positionX < 0 || positionX > 1 || positionY < 0 || positionY > 1) {
+    return c.json({ error: 'Position must be between 0 and 1' }, 400);
+  }
+
+  if (!['north', 'south', 'east', 'west', 'top'].includes(face)) {
+    return c.json({ error: 'Invalid face' }, 400);
+  }
+
+  if (width <= 0 || height <= 0) {
+    return c.json({ error: 'Width and height must be positive' }, 400);
+  }
+
+  try {
+    // Check if building exists
+    const building = await c.env.DB.prepare('SELECT url FROM websites WHERE url = ?')
+      .bind(buildingUrl)
+      .first<{ url: string }>();
+
+    if (!building) {
+      return c.json({ error: 'Building not found' }, 404);
+    }
+
+    // Check for overlapping billboards on the same face
+    // For now, just check if there's already a billboard on this face
+    // (Future: implement proper AABB collision detection)
+    const existingBillboards = await c.env.DB.prepare(`
+      SELECT id FROM billboards
+      WHERE building_url = ? AND face = ?
+    `)
+      .bind(buildingUrl, face)
+      .all<{ id: number }>();
+
+    if (existingBillboards.results.length > 0) {
+      return c.json({ error: 'Billboard already exists on this face' }, 409);
+    }
+
+    // Create billboard record
+    const result = await c.env.DB.prepare(`
+      INSERT INTO billboards
+      (building_url, face, position_x, position_y, width, height, image_url, purchased_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+      .bind(
+        buildingUrl,
+        face,
+        positionX,
+        positionY,
+        width,
+        height,
+        imageUrl || '/billboards/test.svg',
+        new Date().toISOString()
+      )
+      .run();
+
+    return c.json({
+      id: result.meta.last_row_id,
+      buildingUrl,
+      face,
+      positionX,
+      positionY,
+      width,
+      height,
+      imageUrl: imageUrl || '/billboards/test.svg',
+      message: 'Billboard created successfully. Navigate to payment to complete purchase.',
+    });
+  } catch (error) {
+    console.error('Error creating billboard:', error);
+    return c.json({ error: 'Failed to create billboard' }, 500);
+  }
+});
+
 export default app;

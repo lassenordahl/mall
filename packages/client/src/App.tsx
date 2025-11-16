@@ -27,6 +27,15 @@ function AppContent() {
   const [spawnPoint, setSpawnPoint] = useState<SpawnPoint | null>(null);
   const [noclip, setNoclip] = useState(true);
   const [newChunksThisSession, setNewChunksThisSession] = useState(0);
+  const [billboardMode, setBillboardMode] = useState(false);
+  const [ghostBillboard, setGhostBillboard] = useState<{
+    building: BuildingData;
+    face: 'north' | 'south' | 'east' | 'west' | 'top';
+    positionX: number;
+    positionY: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const newChunkKeysRef = useRef<string[]>([]);
 
   // Track player position for dynamic chunk loading
@@ -137,6 +146,7 @@ function AppContent() {
           spawnPosition={spawnPoint.position}
           onNewChunksChange={handleNewChunksChange}
           playerPosition={playerPosition || undefined}
+          ghostBillboard={ghostBillboard}
         />
         <Player
           buildings={buildings}
@@ -145,6 +155,9 @@ function AppContent() {
           noclip={noclip}
           onPositionChange={updatePosition}
           onRotationChange={setCameraYaw}
+          billboardMode={billboardMode}
+          onBillboardModeChange={setBillboardMode}
+          onGhostBillboardChange={setGhostBillboard}
         />
       </Canvas>
 
@@ -202,8 +215,20 @@ function AppContent() {
           textAlign: 'right',
         }}
       >
+        {billboardMode && (
+          <div style={{ color: '#ff6b6b', fontWeight: 'bold', marginBottom: '8px' }}>
+            ⚙️ BILLBOARD MODE ACTIVE
+          </div>
+        )}
         {targetedBuilding ? (
-          <div style={{ fontWeight: 'bold' }}>{targetedBuilding.url}</div>
+          <div>
+            <div style={{ fontWeight: 'bold' }}>{targetedBuilding.url}</div>
+            {billboardMode && (targetedBuilding as any).billboard && (
+              <div style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '4px' }}>
+                ❌ Face unavailable (has billboard)
+              </div>
+            )}
+          </div>
         ) : (
           <div style={{ color: '#999' }}>No target</div>
         )}
@@ -241,6 +266,11 @@ function AppContent() {
         <div>WASD to move</div>
         <div>Mouse to look around</div>
         <div>ESC to unlock</div>
+        <div style={{ marginTop: '10px', borderTop: '1px solid #ccc', paddingTop: '10px' }}>
+          <div style={{ fontWeight: 'bold' }}>Billboard Mode</div>
+          <div>B to toggle billboard placement mode</div>
+          <div>Point at building and click to place</div>
+        </div>
       </div>
     </div>
   );

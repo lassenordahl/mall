@@ -10,13 +10,21 @@ interface WorldProps {
   spawnPosition?: [number, number, number];
   onNewChunksChange?: (newChunkCount: number, newChunkKeys: string[]) => void;
   playerPosition?: PlayerPosition;
+  ghostBillboard?: {
+    building: BuildingData;
+    face: 'north' | 'south' | 'east' | 'west' | 'top';
+    positionX: number;
+    positionY: number;
+    width: number;
+    height: number;
+  } | null;
 }
 
 /**
  * World component - manages all chunks
  * Fetches chunks from API based on player spawn position
  */
-export function World({ onBuildingsLoaded, spawnPosition, onNewChunksChange, playerPosition }: WorldProps) {
+export function World({ onBuildingsLoaded, spawnPosition, onNewChunksChange, playerPosition, ghostBillboard }: WorldProps) {
   console.log('[World] Rendering with spawn position:', spawnPosition);
 
   // Track new chunks
@@ -54,6 +62,7 @@ export function World({ onBuildingsLoaded, spawnPosition, onNewChunksChange, pla
             key={`${chunk.chunkX}-${chunk.chunkZ}`}
             chunk={chunk}
             isNew={chunkIsNew}
+            ghostBillboard={ghostBillboard}
           />
         );
       })}
