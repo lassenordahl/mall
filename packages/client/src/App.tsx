@@ -25,7 +25,7 @@ function AppContent() {
   const [buildings, setBuildings] = useState<BuildingData[]>([]);
   const [targetedBuilding, setTargetedBuilding] = useState<BuildingData | null>(null);
   const [spawnPoint, setSpawnPoint] = useState<SpawnPoint | null>(null);
-  const [noclip, setNoclip] = useState(false);
+  const [noclip, setNoclip] = useState(true);
   const [newChunksThisSession, setNewChunksThisSession] = useState(0);
   const newChunkKeysRef = useRef<string[]>([]);
 

@@ -51,6 +51,23 @@ export interface WorldConfig {
 }
 
 /**
+ * Billboard data for a building
+ */
+export interface BillboardData {
+  id: number;
+  buildingUrl: string;
+  face: 'north' | 'south' | 'east' | 'west' | 'top';
+  positionX: number;        // 0.0-1.0
+  positionY: number;        // 0.0-1.0
+  width: number;            // World units
+  height: number;           // World units
+  imageUrl: string | null;  // Null = unclaimed
+  ownerUserId: number | null;
+  purchasedAt: string | null;
+  expiresAt: string | null;
+}
+
+/**
  * Building data within a chunk
  */
 export interface BuildingData {
@@ -61,6 +78,7 @@ export interface BuildingData {
   worldZ: number;
   width: number;
   height: number;
+  billboard?: BillboardData;      // Billboard data for this building
 }
 
 /**

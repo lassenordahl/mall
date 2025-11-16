@@ -37,6 +37,7 @@ export interface ChunkResponse {
     width: number;
     height: number;
     title?: string;  // From database
+    billboard?: import('./types').BillboardData;  // Billboard data for this building
   }>;
 }
 

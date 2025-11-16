@@ -2,6 +2,7 @@ import type { BuildingData } from '@3d-neighborhood/shared';
 import { DEFAULT_WORLD_CONFIG, BuildingType } from '@3d-neighborhood/shared';
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import { Billboard } from './Billboard';
 
 interface BuildingProps {
   building: BuildingData;
@@ -52,20 +53,25 @@ export function Building({ building, type = BuildingType.NORMAL }: BuildingProps
   }, [building.width, building.height]);
 
   return (
-    <group position={[x, y, z]}>
-      {/* White walls */}
-      <mesh>
-        <boxGeometry args={[building.width, building.height, building.width]} />
-        <meshBasicMaterial color="#ffffff" />
-      </mesh>
+    <>
+      <group position={[x, y, z]}>
+        {/* White walls */}
+        <mesh>
+          <boxGeometry args={[building.width, building.height, building.width]} />
+          <meshBasicMaterial color="#ffffff" />
+        </mesh>
 
-      {/* Colored wireframe edges based on type */}
-      <lineSegments geometry={edgesGeometry}>
-        <lineBasicMaterial
-          color={edgeColor}
-          linewidth={DEFAULT_WORLD_CONFIG.wireframeLineWidth}
-        />
-      </lineSegments>
-    </group>
+        {/* Colored wireframe edges based on type */}
+        <lineSegments geometry={edgesGeometry}>
+          <lineBasicMaterial
+            color={edgeColor}
+            linewidth={DEFAULT_WORLD_CONFIG.wireframeLineWidth}
+          />
+        </lineSegments>
+      </group>
+
+      {/* Render billboard if purchased */}
+      {building.billboard && <Billboard building={building} billboard={building.billboard} />}
+    </>
   );
 }

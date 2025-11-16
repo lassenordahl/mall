@@ -229,24 +229,84 @@ app.get('/api/chunks/:cx/:cz', async (c) => {
       .bind(cx, cz)
       .first<{ data: string }>();
 
+    let chunkData: ChunkResponse;
+    let cacheStatus: 'hit' | 'miss';
+
     if (cached) {
-      const response = c.json<ChunkResponse>(JSON.parse(cached.data));
-      response.headers.set('X-Chunk-Cache-Status', 'hit');
-      return response;
+      chunkData = JSON.parse(cached.data);
+      cacheStatus = 'hit';
+    } else {
+      // Generate new chunk
+      chunkData = await generateChunk(c.env.DB, cx, cz);
+
+      // Cache it
+      await c.env.DB.prepare(
+        'INSERT INTO chunks (chunk_x, chunk_z, data, world_version) VALUES (?, ?, ?, ?)'
+      )
+        .bind(cx, cz, JSON.stringify(chunkData), 1)
+        .run();
+
+      cacheStatus = 'miss';
     }
 
-    // Generate new chunk
-    const chunkData = await generateChunk(c.env.DB, cx, cz);
+    // Fetch billboard data for all buildings in this chunk
+    const buildingUrls = chunkData.buildings.map(b => b.url);
+    if (buildingUrls.length > 0) {
+      const placeholders = buildingUrls.map(() => '?').join(',');
+      const billboards = await c.env.DB.prepare(
+        `SELECT
+          id, building_url, face, position_x, position_y,
+          width, height, image_url, owner_user_id,
+          purchased_at, expires_at
+         FROM billboards
+         WHERE building_url IN (${placeholders})`
+      )
+        .bind(...buildingUrls)
+        .all<{
+          id: number;
+          building_url: string;
+          face: string;
+          position_x: number;
+          position_y: number;
+          width: number;
+          height: number;
+          image_url: string | null;
+          owner_user_id: number | null;
+          purchased_at: string | null;
+          expires_at: string | null;
+        }>();
 
-    // Cache it
-    await c.env.DB.prepare(
-      'INSERT INTO chunks (chunk_x, chunk_z, data, world_version) VALUES (?, ?, ?, ?)'
-    )
-      .bind(cx, cz, JSON.stringify(chunkData), 1)
-      .run();
+      // Merge billboard data into buildings
+      const billboardMap = new Map(
+        billboards.results.map(b => [b.building_url, b])
+      );
+
+      chunkData.buildings = chunkData.buildings.map(building => {
+        const billboard = billboardMap.get(building.url);
+        if (billboard) {
+          return {
+            ...building,
+            billboard: {
+              id: billboard.id,
+              buildingUrl: billboard.building_url,
+              face: billboard.face as 'north' | 'south' | 'east' | 'west' | 'top',
+              positionX: billboard.position_x,
+              positionY: billboard.position_y,
+              width: billboard.width,
+              height: billboard.height,
+              imageUrl: billboard.image_url,
+              ownerUserId: billboard.owner_user_id,
+              purchasedAt: billboard.purchased_at,
+              expiresAt: billboard.expires_at,
+            },
+          };
+        }
+        return building;
+      });
+    }
 
     const response = c.json<ChunkResponse>(chunkData);
-    response.headers.set('X-Chunk-Cache-Status', 'miss');
+    response.headers.set('X-Chunk-Cache-Status', cacheStatus);
     return response;
   } catch (error) {
     console.error('Error generating chunk:', error);
@@ -346,6 +406,52 @@ async function recordPlacements(
 
   await db.batch(statements);
   console.log(`Recorded ${buildings.length} placements for chunk (${cx}, ${cz})`);
+}
+
+/**
+ * Record billboards for all buildings in a chunk
+ * Creates 1 billboard per building on a random face
+ */
+async function recordBillboards(
+  db: D1Database,
+  seed: number,
+  buildings: ChunkResponse['buildings']
+): Promise<void> {
+  if (buildings.length === 0) return;
+
+  // Use seed-based RNG for deterministic billboard placement
+  let rng = seed;
+  const random = () => {
+    rng = (rng * 1103515245 + 12345) & 0x7fffffff;
+    return rng / 0x7fffffff;
+  };
+
+  const faces = ['north', 'south', 'east', 'west', 'top'];
+
+  // Batch insert all billboards
+  const statements = buildings.map((building) => {
+    const face = faces[Math.floor(random() * faces.length)];
+    const positionX = 0.5; // Centered horizontally
+    const positionY = 0.75; // 75% up the face
+    const width = 8; // 8 world units wide
+    const height = 6; // 6 world units tall
+
+    return db.prepare(`
+      INSERT OR IGNORE INTO billboards
+      (building_url, face, position_x, position_y, width, height)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(
+      building.url,
+      face,
+      positionX,
+      positionY,
+      width,
+      height
+    );
+  });
+
+  await db.batch(statements);
+  console.log(`Recorded ${buildings.length} billboards`);
 }
 
 /**
@@ -454,6 +560,9 @@ async function generateChunkWithAnchor(
 
   // Record placements for all buildings
   await recordPlacements(db, cx, cz, buildings);
+
+  // Note: Billboards are no longer auto-generated during chunk creation
+  // They are managed as fixtures in seed data or created via API
 
   return {
     chunkX: cx,
@@ -570,6 +679,9 @@ async function generateChunk(
 
   // Record placements for all buildings
   await recordPlacements(db, cx, cz, buildings);
+
+  // Note: Billboards are no longer auto-generated during chunk creation
+  // They are managed as fixtures in seed data or created via API
 
   return {
     chunkX: cx,
