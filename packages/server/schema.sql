@@ -40,3 +40,4 @@ CREATE TABLE IF NOT EXISTS chunks (
 );
 
 CREATE INDEX IF NOT EXISTS idx_chunks_version ON chunks(world_version);
+CREATE INDEX IF NOT EXISTS idx_chunks_generated ON chunks(generated_at);

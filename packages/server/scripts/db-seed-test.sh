@@ -1,7 +1,8 @@
 #!/bin/bash
-# Seed local database with test data
+# Seed local database with 15 test websites
+# Prerequisites: Run npm run db:reset first
 
-echo "🌱 Seeding test data..."
+echo "🌱 Seeding 15 test websites..."
 
 cat > .wrangler/test-seed.sql << 'EOF'
 INSERT INTO websites (url, title, description, embedding_dim, popularity_score, scraped_at) VALUES
