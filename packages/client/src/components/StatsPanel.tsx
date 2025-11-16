@@ -1,40 +1,14 @@
-import { useState, useEffect } from 'react';
-import { fetchStats } from '@3d-neighborhood/shared/api';
-import type { StatsResponse } from '@3d-neighborhood/shared/api';
+import { useStats } from '@/hooks/api';
 
 interface StatsPanelProps {
   newChunksThisSession: number;
 }
 
 export function StatsPanel({ newChunksThisSession }: StatsPanelProps) {
-  const [stats, setStats] = useState<StatsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use TanStack Query hook with auto-refresh every 10 seconds
+  const { data: stats, isLoading, error } = useStats({ refetchInterval: 10000 });
 
-  useEffect(() => {
-    const loadStats = async () => {
-      try {
-        setLoading(true);
-        const data = await fetchStats();
-        setStats(data);
-        setError(null);
-        console.log('[StatsPanel] Loaded stats:', data);
-      } catch (err) {
-        console.error('[StatsPanel] Failed to load stats:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load stats');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadStats();
-
-    // Refresh stats every 10 seconds
-    const interval = setInterval(loadStats, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (loading && !stats) {
+  if (isLoading && !stats) {
     return (
       <div
         style={{

@@ -7,6 +7,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { ChunkResponse, ErrorResponse } from '@3d-neighborhood/shared/api';
 import { findSimilarWebsites } from './knn';
+import { checkDatabase } from './db-check';
 
 type Bindings = {
   DB: D1Database;
@@ -20,7 +21,14 @@ app.use('/*', cors());
 /**
  * Health check endpoint
  */
-app.get('/health', (c) => {
+app.get('/health', async (c) => {
+  const dbCheck = await checkDatabase(c.env.DB);
+
+  if (!dbCheck.healthy) {
+    console.error('\n' + dbCheck.message + '\n');
+    return c.json({ status: 'error', error: 'Database not ready', details: dbCheck.message }, 503);
+  }
+
   return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 

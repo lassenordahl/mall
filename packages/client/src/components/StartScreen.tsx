@@ -1,13 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Input } from './ui/input';
 import { cn } from '@/lib/utils';
-import { getApiBaseUrl } from '@3d-neighborhood/shared';
-
-interface Website {
-  url: string;
-  title: string;
-  favicon: string;
-}
+import { useSearchWebsites } from '@/hooks/api';
+import type { Website } from '@3d-neighborhood/shared';
 
 interface StartScreenProps {
   onStart: (url: string) => void;
@@ -15,41 +10,21 @@ interface StartScreenProps {
 
 export function StartScreen({ onStart }: StartScreenProps) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Website[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Use TanStack Query hook for search
+  const { data: results = [], isLoading } = useSearchWebsites({ query });
 
   // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // Fetch results when query changes
+  // Reset selected index when results change
   useEffect(() => {
-    if (query.length < 2) {
-      setResults([]);
-      return;
-    }
-
-    const fetchResults = async () => {
-      setLoading(true);
-      try {
-        const apiBase = getApiBaseUrl();
-        const res = await fetch(`${apiBase}/api/websites?q=${encodeURIComponent(query)}`);
-        const data = await res.json();
-        setResults(data);
-        setSelectedIndex(0);
-      } catch (error) {
-        console.error('Failed to fetch websites:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const debounce = setTimeout(fetchResults, 200);
-    return () => clearTimeout(debounce);
-  }, [query]);
+    setSelectedIndex(0);
+  }, [results]);
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -88,7 +63,7 @@ export function StartScreen({ onStart }: StartScreenProps) {
               onKeyDown={handleKeyDown}
               className="w-full h-14 text-lg pl-4 pr-4"
             />
-            {loading && (
+            {isLoading && (
               <div className="absolute right-4 top-1/2 -translate-y-1/2">
                 <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
               </div>
@@ -97,7 +72,7 @@ export function StartScreen({ onStart }: StartScreenProps) {
 
           {results.length > 0 && (
             <div className="absolute top-full mt-2 w-full bg-popover border border-border rounded-md shadow-lg max-h-96 overflow-y-auto">
-              {results.map((website, index) => (
+              {results.map((website: Website, index: number) => (
                 <button
                   key={website.url}
                   onClick={() => onStart(website.url)}

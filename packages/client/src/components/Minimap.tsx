@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { fetchStats } from '@3d-neighborhood/shared/api';
-import type { StatsResponse } from '@3d-neighborhood/shared/api';
+import { useEffect, useRef } from 'react';
+import { useStats } from '@/hooks/api';
 
 interface MinimapProps {
   newChunkKeys: string[]; // Array of "x,z" keys for new chunks
@@ -13,26 +12,9 @@ const CELL_SIZE = 8; // pixels per chunk
 
 export function Minimap({ newChunkKeys, playerPosition, cameraYaw = 0 }: MinimapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [stats, setStats] = useState<StatsResponse | null>(null);
 
-  // Fetch stats for chunk data - refetch when new chunks are added
-  useEffect(() => {
-    const loadStats = async () => {
-      try {
-        const data = await fetchStats();
-        setStats(data);
-        console.log('[Minimap] Loaded stats, total chunks:', data.totalChunks);
-      } catch (err) {
-        console.error('[Minimap] Failed to load stats:', err);
-      }
-    };
-
-    loadStats();
-
-    // Also refetch every 5 seconds to catch new chunks
-    const interval = setInterval(loadStats, 5000);
-    return () => clearInterval(interval);
-  }, [newChunkKeys.length]); // Refetch when newChunkKeys changes
+  // Use TanStack Query hook with auto-refresh every 5 seconds
+  const { data: stats } = useStats({ refetchInterval: 5000 });
 
   // Render minimap
   useEffect(() => {

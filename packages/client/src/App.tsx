@@ -6,11 +6,12 @@ import { StartScreen } from './components/StartScreen';
 import { DebugPanel } from './components/DebugPanel';
 import { StatsPanel } from './components/StatsPanel';
 import { Minimap } from './components/Minimap';
+import { QueryProvider } from './providers/QueryProvider';
 import { usePlayerPosition } from './hooks/usePlayerPosition';
+import { useEntryPoint } from './hooks/api';
 import * as THREE from 'three';
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { BuildingData } from '@3d-neighborhood/shared';
-import { getApiBaseUrl } from '@3d-neighborhood/shared';
+import type { BuildingData, EntryPointResponse } from '@3d-neighborhood/shared';
 
 interface SpawnPoint {
   position: [number, number, number];
@@ -18,14 +19,12 @@ interface SpawnPoint {
 }
 
 /**
- * Main app component
- * Sets up Three.js Canvas and renders the 3D neighborhood
+ * Main app component (wrapped in QueryProvider)
  */
-function App() {
+function AppContent() {
   const [buildings, setBuildings] = useState<BuildingData[]>([]);
   const [targetedBuilding, setTargetedBuilding] = useState<BuildingData | null>(null);
   const [spawnPoint, setSpawnPoint] = useState<SpawnPoint | null>(null);
-  const [loading, setLoading] = useState(false);
   const [noclip, setNoclip] = useState(false);
   const [newChunksThisSession, setNewChunksThisSession] = useState(0);
   const newChunkKeysRef = useRef<string[]>([]);
@@ -33,6 +32,9 @@ function App() {
   // Track player position for dynamic chunk loading
   const { position: playerPosition, updatePosition } = usePlayerPosition();
   const [cameraYaw, setCameraYaw] = useState<number>(0);
+
+  // Use entry point mutation
+  const { mutate: getEntryPoint, isPending: isLoadingEntryPoint } = useEntryPoint();
 
   // Check for URL parameters on mount
   useEffect(() => {
@@ -51,44 +53,32 @@ function App() {
     }
   }, []);
 
-  const handleStart = async (url: string) => {
-    setLoading(true);
-    try {
-      console.log(`[App] Fetching entry point for URL: ${url}`);
-      // Fetch entry point from API
-      const apiBase = getApiBaseUrl();
-      const res = await fetch(`${apiBase}/entry-point`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
+  const handleStart = useCallback((url: string) => {
+    console.log(`[App] Fetching entry point for URL: ${url}`);
 
-      if (!res.ok) {
-        throw new Error('Website not found or not placed yet');
-      }
+    getEntryPoint(url, {
+      onSuccess: (data: EntryPointResponse) => {
+        console.log('[App] Entry point response:', data);
+        console.log(`[App] Spawn position: (${data.spawnX}, ${data.spawnY}, ${data.spawnZ})`);
+        console.log(`[App] Building chunk: (${data.chunkX}, ${data.chunkZ})`);
+        console.log(`[App] Look at: (${data.lookAtX}, ${data.lookAtY}, ${data.lookAtZ})`);
 
-      const data = await res.json();
-      console.log('[App] Entry point response:', data);
-      console.log(`[App] Spawn position: (${data.spawnX}, ${data.spawnY}, ${data.spawnZ})`);
-      console.log(`[App] Building chunk: (${data.chunkX}, ${data.chunkZ})`);
-      console.log(`[App] Look at: (${data.lookAtX}, ${data.lookAtY}, ${data.lookAtZ})`);
-
-      setSpawnPoint({
-        position: [data.spawnX, data.spawnY, data.spawnZ],
-        lookAt: [data.lookAtX, data.lookAtY, data.lookAtZ],
-      });
-    } catch (error) {
-      console.error('[App] Failed to find entry point:', error);
-      // Default spawn at origin
-      console.log('[App] Using default spawn at origin');
-      setSpawnPoint({
-        position: [0, 1.6, 10],
-        lookAt: [0, 10, 0],
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+        setSpawnPoint({
+          position: [data.spawnX, data.spawnY, data.spawnZ],
+          lookAt: [data.lookAtX, data.lookAtY, data.lookAtZ],
+        });
+      },
+      onError: (error: Error) => {
+        console.error('[App] Failed to find entry point:', error);
+        // Default spawn at origin
+        console.log('[App] Using default spawn at origin');
+        setSpawnPoint({
+          position: [0, 1.6, 10],
+          lookAt: [0, 10, 0],
+        });
+      },
+    });
+  }, [getEntryPoint]);
 
   const handleBuildingsLoaded = useCallback((newBuildings: BuildingData[]) => {
     console.log(`[App] Buildings loaded: ${newBuildings.length} buildings`);
@@ -118,7 +108,7 @@ function App() {
   }
 
   // Show loading state
-  if (loading) {
+  if (isLoadingEntryPoint) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center">
         <div className="text-center">
@@ -253,6 +243,17 @@ function App() {
         <div>ESC to unlock</div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Main app component with QueryProvider wrapper
+ */
+function App() {
+  return (
+    <QueryProvider>
+      <AppContent />
+    </QueryProvider>
   );
 }
 

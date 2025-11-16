@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "db:create-local": "wrangler d1 create neighborhood-db --local",
+    "db:reset": "bash scripts/db-local-reset.sh",
+    "db:seed-test": "bash scripts/db-seed-test.sh",
+    "db:pull-production": "bash scripts/db-pull-production.sh",
+    "db:push-production": "tsx scripts/db-push-production.ts",
     "db:init-local": "wrangler d1 execute neighborhood-db --local --file=./schema.sql",
     "db:import-local": "tsx scripts/import-local-db.ts"
   },
